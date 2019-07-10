@@ -43,6 +43,8 @@ import java.io.*
 import java.nio.channels.FileChannel
 import java.util.*
 import java.util.regex.Pattern
+import nl.mpcjanssen.simpletask.MyInterpreter
+import java.text.SimpleDateFormat
 
 val TAG = "Util"
 val todayAsString: String
@@ -142,34 +144,128 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
     }
     val firstSort = sorts[firstGroupSortIndex]
 
-    var header = ""
+    var header1 = ""
+    var header2:String? = ""
+    var header3:String? = ""
     val result = ArrayList<VisibleLine>()
-    var count = 0
-    var headerLine: HeaderLine? = null
+    var count1 = 0
+    var count2 = 0
+    var count3 = 0
+    var showCount:String? = ""
+    var headerLine1: HeaderLine? = null
+    var headerLine2: HeaderLine? = null
+    var headerLine3: HeaderLine? = null
     val luaGrouping = moduleName != null && Interpreter.hasOnGroupCallback(moduleName)
     for (item in visibleTasks) {
         val t = item
-        val newHeader = if (moduleName != null && luaGrouping) {
+        val header = MyInterpreter.onGroupCallback(t)
+        val newHeader1 = if (moduleName != null && luaGrouping) {
             Interpreter.onGroupCallback(moduleName, t)
         } else {
-            null
+//            null
+            header[0]
         } ?: t.getHeader(firstSort, no_header, createIsThreshold)
-        if (header != newHeader) {
-            if (headerLine != null) {
-                headerLine.title += " ($count)"
+
+        val newHeader2 = header[1]
+        val newHeader3 = header[2]
+        if (header1 != newHeader1) {
+
+            if (headerLine1 != null && showCount != null) {
+                headerLine1.title += " ($count1)"
             }
-            headerLine = HeaderLine(newHeader)
-            count = 0
-            result.add(headerLine)
-            header = newHeader
+            headerLine1 = HeaderLine(newHeader1)
+            count1 = 0
+            result.add(headerLine1)
+            header1 = newHeader1
+
+            if (headerLine2 != null) {
+                headerLine2.title += " ($count2)"
+            }
+            if(newHeader2 != null) {
+                headerLine2 = HeaderLine(newHeader2)
+                result.add(headerLine2)
+            } else {
+                headerLine2 = null
+            }
+            count2 = 0
+            header2 = newHeader2
+
+            if (headerLine3 != null) {
+                headerLine3.title += " ($count3)"
+            }
+            if(newHeader3 != null) {
+                headerLine3 = HeaderLine(newHeader3)
+                result.add(headerLine3)
+            } else {
+                headerLine3 = null
+            }
+            count3 = 0
+            header3 = newHeader3
+
         }
-        count++
+
+        if (header2 != newHeader2) {
+
+            if (headerLine2 != null) {
+                headerLine2.title += " ($count2)"
+            }
+            if(newHeader2 != null) {
+                headerLine2 = HeaderLine(newHeader2)
+                result.add(headerLine2)
+            } else {
+                headerLine2 = null
+            }
+            count2 = 0
+            header2 = newHeader2
+
+            if (headerLine3 != null) {
+                headerLine3.title += " ($count3)"
+            }
+            if(newHeader3 != null) {
+                headerLine3 = HeaderLine(newHeader3)
+                result.add(headerLine3)
+            } else {
+                headerLine3 = null
+            }
+            count3 = 0
+            header3 = newHeader3
+
+        }
+
+
+        if (header3 != newHeader3) {
+
+            if (headerLine3 != null) {
+                headerLine3.title += " ($count3)"
+            }
+            if(newHeader3 != null) {
+                headerLine3 = HeaderLine(newHeader3)
+                result.add(headerLine3)
+            } else {
+                headerLine3 = null
+            }
+            count3 = 0
+            header3 = newHeader3
+
+        }
+
+        count1++
+        count2++
+        count3++
+        showCount = header[3]
+
         val taskLine = TaskLine(item)
         result.add(taskLine)
     }
     // Add count to last header
-    if (headerLine != null) {
-        headerLine.title += " ($count)"
+    if (headerLine1 != null && showCount != null) {
+        headerLine1.title += " ($count1)"
+    }
+    if (headerLine2 != null) {
+        headerLine2.title += " ($count2)"
+    }
+    if (headerLine3 != null) {
+        headerLine3.title += " ($count3)"
     }
 
     // Clean up possible last empty list header that should be hidden
@@ -374,19 +470,34 @@ fun TextView.setOnImeAction(id: Int, callback: (TextView) -> Unit): Unit {
 }
 
 fun createDeferDialog(act: Activity, titleId: Int, listener: InputDialogListener): AlertDialog {
-    val keys = act.resources.getStringArray(R.array.deferOptions)
-    val today = "0d"
-    val tomorrow = "1d"
-    val oneWeek = "1w"
-    val twoWeeks = "2w"
-    val oneMonth = "1m"
-    val values = arrayOf("", today, tomorrow, oneWeek, twoWeeks, oneMonth, "pick")
+//    keys = act.resources.getStringArray(R.array.deferOptions)
+//    val today = "0d"
+//    val tomorrow = "1d"
+//    val oneWeek = "1w"
+//    val twoWeeks = "2w"
+//    val oneMonth = "1m"
+//    val values = arrayOf("", today, tomorrow, oneWeek, twoWeeks, oneMonth, "pick")
+
+
+    val values = arrayOf("", "0d", "1d", "2d", "3d", "4d", "5d", "6d", "pick")
+    val weekDays = arrayOf("星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六",
+                           "星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"
+            )
+    val i = DateTime.today(TimeZone.getDefault()).weekDay
+    val keys = arrayOf("无",
+            "今日　（${weekDays[i-1]}）",
+            "明天　（${weekDays[i]}）",
+            "后天　（${weekDays[i+1]}）",
+            "大后天（${weekDays[i+2]}）",
+            "四天后（${weekDays[i+3]}）",
+            "五天后（${weekDays[i+4]}）",
+            "六天后（${weekDays[i+5]}）",
+            "用日历选择日期")
 
     val builder = AlertDialog.Builder(act)
     builder.setTitle(titleId)
     builder.setItems(keys) { _, whichButton ->
-        val which = whichButton
-        val selected = values[which]
+        val selected = values[whichButton]
         listener.onClick(selected)
     }
     return builder.create()
@@ -568,14 +679,19 @@ fun readAsset(assets: AssetManager, name: String): String {
 
 fun getRelativeThresholdDate(task: Task, app: TodoApplication): String? {
     val date = task.thresholdDate ?: return null
-    return getRelativeDate(app, "T: ", date).toString()
+    return getRelativeDate(app, "起始: ", date).toString()
 }
 
 fun getRelativeDueDate(task: Task, app: TodoApplication): SpannableString? {
     val date = task.dueDate ?: return null
-    return getRelativeDate(app, "Due: ", date)
+    return getRelativeDate(app, "到期: ", date)
 }
 
+fun getRelativeDeferDate(task: Task, app: TodoApplication): String? {
+    val date = task.deferDate ?: return null
+    val s1 = MyInterpreter.daysBetween(date, task.thresholdDate).toString()
+    return getRelativeDate(app, "押后 $s1 天: ", date).toString()
+}
 /**
  * This method returns a String representing the relative date by comparing
  * the Calendar being passed in to the date / time that it is right now. It
@@ -602,6 +718,8 @@ private fun getRelativeDate(app: TodoApplication, prefix: String, dateString: St
     val days = date.numDaysFrom(now)
     val months = days / 31
     val weeks = days / 7
+    val weekDays = arrayOf("星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六")
+    val weekString = weekDays[date.weekDay - 1]
     val years = days / 365
     val s = when {
         years == 1 -> app.getString(R.string.dates_one_year_ago)
@@ -617,9 +735,10 @@ private fun getRelativeDate(app: TodoApplication, prefix: String, dateString: St
         else -> date.toString()
     }
 
-    val ss = SpannableString(prefix + s)
+//    val ss = SpannableString(prefix + s)
+    val ss = SpannableString("$prefix$s $weekString")
 
-    if (Config.hasColorDueDates && prefix == "Due: ") {
+    if (Config.hasColorDueDates && prefix == "到期: ") {
         val dueTodayColor = ContextCompat.getColor(app, R.color.simple_green_light)
         val overDueColor = ContextCompat.getColor(app, R.color.simple_red_light)
         val dueTomorrowColor = ContextCompat.getColor(app, R.color.simple_blue_light)

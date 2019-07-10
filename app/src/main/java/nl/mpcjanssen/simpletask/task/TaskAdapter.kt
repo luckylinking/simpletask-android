@@ -6,8 +6,11 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import android.text.SpannableString
+import android.text.Spanned
 import android.text.Spanned.*
 import android.text.TextUtils
+import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.util.Log
 import android.view.LayoutInflater
@@ -63,6 +66,23 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
     private fun bindHeader(holder : TaskViewHolder, position: Int) {
         val t = holder.itemView.list_header_title
         val line = visibleLines[position]
+//
+//        val spannableString = SpannableString("设置文字的背景色为淡绿色")
+//        val colorSpan = BackgroundColorSpan(Color.parseColor("#AC00FF30"))
+//        spannableString.setSpan(colorSpan, 9, spannableString.length, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+//        textView.setText()
+
+//        val text = SpannableString(line.title)
+//////        val colorA = ContextCompat.getColor(TodoApplication.app, R.color.simple_red_dark)
+//////        val colorB = ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_dark)
+//////
+//////        setColor(text, colorA, "到期")
+//////        setColor(text, colorB, "限期")
+////        val colorSpan = ForegroundColorSpan(Color.parseColor("#0099EE"))
+////        val colorRed = BackgroundColorSpan(Color.RED)
+//////        text.setSpan(StrikethroughSpan(), 0 , text.length, SPAN_INCLUSIVE_INCLUSIVE
+////        text.setSpan(colorSpan,0,4, SPAN_INCLUSIVE_EXCLUSIVE);
+//        t.text = spannableString
         t.text = line.title
         t.textSize = textSize
     }
@@ -75,8 +95,14 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         val taskAge = view.taskage
         val taskDue = view.taskdue
         val taskThreshold = view.taskthreshold
+        val taskDefer = view.taskdefer
+        val taskBegin = view.taskbegin
+        val taskEnd = view.taskend
+        val taskRec = view.taskrec
+        val taskTimeDefer = view.timedefer
+        val showTaskCheckBox = MyInterpreter.onGroupCallback(task)[3]
 
-        if (Config.showCompleteCheckbox) {
+        if (Config.showCompleteCheckbox && (showTaskCheckBox != null)) {
             view.checkBox.visibility = View.VISIBLE
         } else {
             view.checkBox.visibility = View.GONE
@@ -95,6 +121,13 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
                 is ThresholdDateToken -> !Config.hasExtendedTaskView
                 is ListToken -> !query.hideLists
                 is TagToken -> !query.hideTags
+                is DeferToken -> false
+                is TopToken -> false
+                is BottomToken -> false
+                is BeginTimeToken -> false
+                is EndTimeToken -> false
+                is RecurrenceToken -> false
+                is DeferTimeToken -> false
                 else -> true
             }
         }
@@ -119,6 +152,11 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         taskAge.textSize = textSize * Config.dateBarRelativeSize
         taskDue.textSize = textSize * Config.dateBarRelativeSize
         taskThreshold.textSize = textSize * Config.dateBarRelativeSize
+        taskDefer.textSize = textSize * Config.dateBarRelativeSize
+        taskBegin.textSize = textSize * Config.dateBarRelativeSize
+        taskEnd.textSize = textSize * Config.dateBarRelativeSize
+        taskTimeDefer.textSize = textSize * Config.dateBarRelativeSize
+        taskRec.textSize = textSize * Config.dateBarRelativeSize
 
         val cb = view.checkBox
 
@@ -142,6 +180,25 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         val relAge = getRelativeAge(task, TodoApplication.app)
         val relDue = getRelativeDueDate(task, TodoApplication.app)
         val relativeThresholdDate = getRelativeThresholdDate(task, TodoApplication.app)
+        val relDefer = getRelativeDeferDate(task, TodoApplication.app)
+//        var txtBegin = task.beginTime
+//        if (txtBegin!=null) txtBegin = "开始: $txtBegin"
+        val txtBegin = ""
+        var txtEnd = task.endTime
+        if (txtEnd!=null) txtEnd = "结束: $txtEnd"
+        var timeDefer = task.deferTime
+        if (timeDefer!=null) timeDefer = "推迟: $timeDefer"
+        var txtRec = task.recurrencePattern
+        if (txtRec!=null) txtRec = "重复: " + txtRec.
+                replace("d"," 日").
+                replace("b", " 工作日").
+                replace("w", " 星期").
+                replace("m", " 月").
+                replace("y", " 年").
+                replace("+", "每 ").
+                replace(" 1 ", "")
+
+
         if (!relAge.isNullOrEmpty() && !query.hideCreateDate) {
             taskAge.text = relAge
             taskAge.visibility = View.VISIBLE
@@ -157,6 +214,15 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
             taskDue.text = ""
             taskDue.visibility = View.GONE
         }
+
+        if (!relDefer.isNullOrEmpty()) {
+            taskDefer.text = relDefer
+            taskDefer.visibility = View.VISIBLE
+        } else {
+            taskDefer.text = ""
+            taskDefer.visibility = View.GONE
+        }
+
         if (!relativeThresholdDate.isNullOrEmpty()) {
             taskThreshold.text = relativeThresholdDate
             taskThreshold.visibility = View.VISIBLE
@@ -164,6 +230,39 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
             taskThreshold.text = ""
             taskThreshold.visibility = View.GONE
         }
+
+        if (!txtBegin.isNullOrEmpty()) {
+            taskBegin.text = txtBegin
+            taskBegin.visibility = View.VISIBLE
+        } else {
+            taskBegin.text = ""
+            taskBegin.visibility = View.GONE
+        }
+
+        if (!txtEnd.isNullOrEmpty()) {
+            taskEnd.text = txtEnd
+            taskEnd.visibility = View.VISIBLE
+        } else {
+            taskEnd.text = ""
+            taskEnd.visibility = View.GONE
+        }
+
+        if (!timeDefer.isNullOrEmpty()) {
+            taskTimeDefer.text = timeDefer
+            taskTimeDefer.visibility = View.VISIBLE
+        } else {
+            taskTimeDefer.text = ""
+            taskTimeDefer.visibility = View.GONE
+        }
+
+        if (!txtRec.isNullOrEmpty()) {
+            taskRec.text = txtRec
+            taskRec.visibility = View.VISIBLE
+        } else {
+            taskRec.text = ""
+            taskRec.visibility = View.GONE
+        }
+
         // Set selected state
         // Log.d(tag, "Setting selected state ${TodoList.isSelected(item)}")
         view.isActivated = TodoList.isSelected(task)

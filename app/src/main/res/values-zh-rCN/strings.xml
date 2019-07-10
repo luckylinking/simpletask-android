@@ -2,7 +2,6 @@
 <resources>
     <string name="invalid_context">清单名称无效</string>
     <string name="invalid_project">标签名称无效</string>
-    <string name="app_label">Simpletask</string>
     <string name="add_task_failed">无法添加任务</string>
     <string name="save_task">保存任务</string>
     <string name="update_task_failed">无法更新任务</string>
@@ -255,11 +254,11 @@
     <string name="by_context_todotxt">场景</string>
     <string name="completed">己完成</string>
     <string name="by_creation_date">创建日期</string>
-    <string name="in_future">启动日期到达与否</string>
+    <string name="in_future">启动日期（未启动任务按倒序）</string>
     <string name="by_due_date">截止日期</string>
-    <string name="by_threshold_date">启动日期</string>
+    <string name="by_threshold_date">是否有截止日期</string>
     <string name="by_completion_date">完成日期</string>
-    <string name="by_lua">Lua 脚本</string>
+    <string name="by_lua">我的自定义规则</string>
     <string name="filter_select_all">选择全部</string>
     <string name="filter_clear_all">清除筛选器</string>
     <string name="filter_invert">反向筛选</string>

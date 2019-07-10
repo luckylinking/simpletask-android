@@ -14,10 +14,10 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.3.1'
+        classpath 'com.android.tools.build:gradle:3.4.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
-        classpath("com.github.triplet.gradle:play-publisher:2.2.0")
+//        classpath("com.github.triplet.gradle:play-publisher:2.2.0")
     }
 }
 
@@ -25,7 +25,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
-apply plugin: 'com.github.triplet.play'
+//apply plugin: 'com.github.triplet.play'
 
 if (!project.hasProperty("storeP12File")) {
     ext.storeP12File = file("/")
@@ -40,7 +40,13 @@ android {
     compileSdkVersion 28
     flavorDimensions "main"
 
+
     lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
+
         disable 'InvalidPackage', 'MissingTranslation'
     }
 
@@ -54,7 +60,7 @@ android {
     }
 
     defaultConfig {
-        versionName '10.3.0'
+        versionName '0.10.3.0'
         versionCode 3211
         multiDexEnabled true
         minSdkVersion 15
@@ -70,7 +76,7 @@ android {
         }
         cloudless {
             dimension "main"
-            setApplicationId("nl.mpcjanssen.simpletask")
+            setApplicationId("mod.luckylinking.simpletask")
             manifestPlaceholders = [providerFlavour: "cloudless"]
         }
         nextcloud {
@@ -110,19 +116,19 @@ android {
         targetCompatibility JavaVersion.VERSION_1_7
     }
 
-    play {
-        // ...
-
-    }
+//    play {
+//        // ...
+//
+//    }
 }
 
-play {
-    serviceAccountEmail = storeServiceAccount
-    serviceAccountCredentials = new File(System.getenv("HOME"), storeP12File)
-    track = 'production' // or 'rollout' or 'beta' or 'alpha'
-    userFraction = 1 // only necessary for 'rollout', in this case default is 1 (100% of the target)
-    // uploadImages = true // uncomment to upload images using publishListing<Flavour>Release
-}
+//play {
+//    serviceAccountEmail = storeServiceAccount
+//    serviceAccountCredentials = new File(System.getenv("HOME"), storeP12File)
+//    track = 'production' // or 'rollout' or 'beta' or 'alpha'
+//    userFraction = 1 // only necessary for 'rollout', in this case default is 1 (100% of the target)
+//    // uploadImages = true // uncomment to upload images using publishListing<Flavour>Release
+//}
 
 repositories {
     jcenter()

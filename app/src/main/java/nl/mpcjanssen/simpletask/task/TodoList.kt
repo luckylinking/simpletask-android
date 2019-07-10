@@ -207,7 +207,7 @@ object TodoList {
         val sorts = filter.getSort(Config.defaultSorts)
         Log.d(TAG, "Getting sorted and filtered tasks")
         val start = SystemClock.elapsedRealtime()
-        val comp = MultiComparator(sorts, TodoApplication.app.today, caseSensitive, filter.createIsThreshold, filter.luaModule)
+        val comp = MultiComparator(sorts, TodoApplication.app.today, MyInterpreter.hourMinuteNow(), caseSensitive, filter.createIsThreshold, filter.luaModule)
         val listCopy = todoItems.toList()
         val taskCount = listCopy.size
         val itemsToSort = if (comp.fileOrder) {

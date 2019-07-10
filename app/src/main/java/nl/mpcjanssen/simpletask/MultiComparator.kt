@@ -4,8 +4,9 @@ import android.util.Log
 import nl.mpcjanssen.simpletask.task.Task
 import nl.mpcjanssen.simpletask.util.alfaSort
 import java.util.*
+import nl.mpcjanssen.simpletask.MyInterpreter
 
-class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createAsBackup: Boolean, moduleName: String? = null) {
+class MultiComparator(sorts: ArrayList<String>, today: String, hourMinutesNow: String, caseSensitve: Boolean, createAsBackup: Boolean, moduleName: String? = null) {
     var comparator : Comparator<Task>? = null
 
     var fileOrder = true
@@ -58,23 +59,19 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                 "by_prio" -> comp = { it.priority }
                 "completed" -> comp = { it.isCompleted() }
                 "by_creation_date" -> comp = { it.createDate ?: lastDate }
-                "in_future" -> comp = { it.inFuture(today) }
+//                "in_future" -> comp = { it.inFuture(today) }
                 "by_due_date" -> comp = { it.dueDate ?: lastDate }
-                "by_threshold_date" -> comp = {
-                    val fallback = if (createAsBackup) it.createDate ?: lastDate else lastDate
-                    it.thresholdDate ?: fallback
-                }
+//                "by_threshold_date" -> comp = {
+//                    val fallback = if (createAsBackup) it.createDate ?: lastDate else lastDate
+//                    it.thresholdDate ?: fallback
+//                }
+// +modify
+                "in_future" -> comp = { MyInterpreter.onThresholdSort(it, today) }
+                "by_threshold_date" -> comp = { it.dueDate != null }
+// -modify
                 "by_completion_date" -> comp = { it.completionDate ?: lastDate }
-                "by_lua" -> {
-                    if (moduleName == null || !Interpreter.hasOnSortCallback(moduleName)) {
-                       continue@label
-                    }
-                    comp = {
-                        luaCache[it] ?: Interpreter.onSortCallback(moduleName, it).also { str ->
-                            luaCache[it] = str
-                        }
-                    }
-                }
+                "by_lua" -> comp = { MyInterpreter.onSortCallback(it, today, hourMinutesNow)}
+
                 else -> {
                     Log.w("MultiComparator", "Unknown sort: $sort")
                     continue@label

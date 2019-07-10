@@ -96,7 +96,7 @@ class Task(text: String, defaultPrependedDate: String? = null) {
             if (dateStr.isNullOrEmpty()) {
                 tokens = tokens.filter { it !is DueDateToken }
             } else {
-                upsertToken(DueDateToken(dateStr!!))
+                upsertToken(DueDateToken(dateStr))
             }
         }
 
@@ -106,7 +106,51 @@ class Task(text: String, defaultPrependedDate: String? = null) {
             if (dateStr.isNullOrEmpty()) {
                 tokens = tokens.filter { it !is ThresholdDateToken }
             } else {
-                upsertToken(ThresholdDateToken(dateStr!!))
+                if (thresholdDate == null) {
+                    upsertToken(ThresholdDateToken(dateStr))
+                } else {
+                    upsertToken(DeferToken(dateStr))
+                }
+            }
+        }
+
+    var deferDate: String?
+        get() = getFirstToken<DeferToken>()?.valueStr
+        set(dateStr) {
+            if (dateStr.isNullOrEmpty()) {
+                tokens = tokens.filter { it !is DeferToken }
+            } else {
+                upsertToken(DeferToken(dateStr))
+            }
+        }
+
+    var beginTime: String?
+        get() = getFirstToken<BeginTimeToken>()?.valueStr
+        set(timeStr) {
+            if (timeStr.isNullOrEmpty()) {
+                tokens = tokens.filter { it !is BeginTimeToken }
+            } else {
+                upsertToken(BeginTimeToken(timeStr))
+            }
+        }
+
+    var endTime: String?
+        get() = getFirstToken<EndTimeToken>()?.valueStr
+        set(timeStr) {
+            if (timeStr.isNullOrEmpty()) {
+                tokens = tokens.filter { it !is BeginTimeToken }
+            } else {
+                upsertToken(BeginTimeToken(timeStr))
+            }
+        }
+
+    var deferTime: String?
+        get() = getFirstToken<DeferTimeToken>()?.valueStr
+        set(timeStr) {
+            if (timeStr.isNullOrEmpty()) {
+                tokens = tokens.filter { it !is DeferTimeToken }
+            } else {
+                upsertToken(DeferTimeToken(timeStr))
             }
         }
 
@@ -184,11 +228,17 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                     deferFromDate = completionDate ?: ""
                 }
                 val newTask = Task(textWithoutCompletedInfo)
+
+                newTask.deferDate = null    //  新任务不设置 推延日期
+                newTask.deferTime = null    //  新任务不设置 推延时间
+
                 if (newTask.dueDate != null) {
                     newTask.deferDueDate(pattern, deferFromDate)
-
                 }
+
+                if (deferFromDate == "") deferFromDate = newTask.thresholdDate?: "" //避免后面因为取消threshouldDate后丢失重复日期基准的问题
                 if (newTask.thresholdDate != null) {
+                    newTask.thresholdDate = null    //加上此操作，保证不会将日期设置为DeferDate
                     newTask.deferThresholdDate(pattern, deferFromDate)
                 }
                 if (!createDate.isNullOrEmpty()) {
@@ -258,6 +308,14 @@ class Task(text: String, defaultPrependedDate: String? = null) {
 
     fun isHidden(): Boolean {
         return getFirstToken<HiddenToken>()?.value ?: false
+    }
+
+    fun onTop(): Boolean {
+        return getFirstToken<TopToken>()?.value ?: false
+    }
+
+    fun onBottom(): Boolean {
+        return getFirstToken<BottomToken>()?.value ?: false
     }
 
     fun isCompleted(): Boolean {
@@ -342,11 +400,14 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                 + "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" + "(" + "\\."
                 + "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" + ")+").matcher("")
 
-//        fun parse(text: String): ArrayList<TToken> {
-//            val tokens = ArrayList<TToken>()
-//            tokens.add(TextToken(text))
-//            return tokens
-//        }
+        private val MATCH_DEFER = Pattern.compile("[Dd]:(\\d{4}-\\d{2}-\\d{2})").matcher("")
+        private val MATCH_TOP = Pattern.compile("[Tt][Oo][Pp]:(.+)").matcher("")
+        private val MATCH_BOTTOM = Pattern.compile("[Bb][Oo][Tt][Tt][Oo][Mm]:(.+)").matcher("")
+        private val MATCH_BEGIN = Pattern.compile("[Bb][Ee][Gg][Ii][Nn]:(\\d{2}:\\d{2})").matcher("")
+        private val MATCH_END = Pattern.compile("[Ee][Nn][Dd]:(\\d{2}:\\d{2})").matcher("")
+        private val MATCH_DEFER_TIME = Pattern.compile("[Dd][Ee][Ff][Ee][Rr]:(\\d{2}:\\d{2})").matcher("")
+
+
 
         fun parse(text: String): ArrayList<TToken> {
             synchronized(this) {
@@ -405,6 +466,19 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                             return@forEach
                         }
                     }
+                    MATCH_TOP.reset(lexeme).apply {
+                        if (matches()) {
+                            tokens.add(TopToken(group(1)))
+                            return@forEach
+                        }
+                    }
+                    MATCH_BOTTOM.reset(lexeme).apply {
+                        if (matches()) {
+                            tokens.add(BottomToken(group(1)))
+                            return@forEach
+                        }
+                    }
+
                     // Match phone numbers before tags to support +31.....
                     // This will make tags which can also be interpreted as phone numbers not possible
                     MATCH_PHONE_NUMBER.reset(lexeme).apply {
@@ -426,6 +500,32 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                             return@forEach
                         }
                     }
+                    MATCH_DEFER.reset(lexeme)?.apply {
+                        if (matches()) {
+                            tokens.add(DeferToken(group(1)))
+                            return@forEach
+                        }
+                    }
+
+                    MATCH_BEGIN.reset(lexeme)?.apply {
+                        if (matches()) {
+                            tokens.add(BeginTimeToken(group(1)))
+                            return@forEach
+                        }
+                    }
+                    MATCH_END.reset(lexeme)?.apply {
+                        if (matches()) {
+                            tokens.add(EndTimeToken(group(1)))
+                            return@forEach
+                        }
+                    }
+                    MATCH_DEFER_TIME.reset(lexeme)?.apply {
+                        if (matches()) {
+                            tokens.add(DeferTimeToken(group(1)))
+                            return@forEach
+                        }
+                    }
+
                     MATCH_RECURRENCE.reset(lexeme).apply {
                         if (matches()) {
                             tokens.add(RecurrenceToken(group(1)))
@@ -456,12 +556,15 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                             return@forEach
                         }
                     }
+
                     if (lexeme.isBlank()) {
                         tokens.add(WhiteSpaceToken(lexeme))
                     } else {
                         tokens.add(TextToken(lexeme))
                     }
+
                 }
+
                 return tokens
             }
         }
@@ -555,6 +658,10 @@ data class ThresholdDateToken(override val valueStr: String) : KeyValueToken {
     override val key = "t"
 }
 
+data class DeferToken(override val valueStr : String) : KeyValueToken {
+    override val key = "d"
+}
+
 data class RecurrenceToken(override val valueStr: String) : KeyValueToken {
     override val key = "rec"
 }
@@ -574,3 +681,26 @@ data class UUIDToken(override val valueStr: String) : KeyValueToken {
 // Extension functions
 fun String.lex(): List<String> = this.split(" ")
 
+data class TopToken(override val valueStr : String) : KeyValueToken {
+    override val key = "top"
+    override val value: Boolean
+        get() = true
+}
+
+data class BottomToken(override val valueStr : String) : KeyValueToken {
+    override val key = "bottom"
+    override val value: Boolean
+        get() = true
+}
+
+data class BeginTimeToken(override val valueStr : String) : KeyValueToken {
+    override val key = "begin"
+}
+
+data class EndTimeToken(override val valueStr : String) : KeyValueToken {
+    override val key = "end"
+}
+
+data class DeferTimeToken(override val valueStr : String) : KeyValueToken {
+    override val key = "defer"
+}

@@ -149,6 +149,7 @@ data class AppWidgetRemoteViewsFactory(val intent: Intent) : RemoteViewsService.
         val relAge = getRelativeAge(task, TodoApplication.app)
         val relDue = getRelativeDueDate(task, TodoApplication.app)
         val relThres = getRelativeThresholdDate(task, TodoApplication.app)
+        val relDefer = getRelativeDeferDate(task, TodoApplication.app)
         var anyDateShown = false
         if (!relAge.isNullOrEmpty() && !filter.hideCreateDate) {
             rv.setTextViewText(R.id.taskage, relAge)
@@ -167,6 +168,12 @@ data class AppWidgetRemoteViewsFactory(val intent: Intent) : RemoteViewsService.
             rv.setTextViewText(R.id.taskthreshold, relThres)
         } else {
             rv.setTextViewText(R.id.taskthreshold, "")
+        }
+        if (!relDefer.isNullOrEmpty()) {
+            anyDateShown = true
+            rv.setTextViewText(R.id.taskdefer, relThres)
+        } else {
+            rv.setTextViewText(R.id.taskdefer, "")
         }
         if (!anyDateShown || task.isCompleted() || !extended_widget) {
             rv.setViewVisibility(R.id.datebar, View.GONE)
