@@ -64,7 +64,7 @@ object MyInterpreter {
         var timeZone:String? = "　　"
         var tag:String? = "　　"
         var showCount:String? = ""
-
+        var deferTime:String? = null
         val today = TodoApplication.app.today
 
         if (f.isCompleted()) prefix = "已完成" else {
@@ -81,7 +81,10 @@ object MyInterpreter {
                     tag = null
                     showCount = null
                 }
-                "4" -> prefix +="今日"
+                "4" -> {
+                    prefix +="今日"
+                    deferTime = f.deferTime
+                }
                 "5" -> {
                     prefix +="今日终了"
                     timeZone = null
@@ -106,7 +109,7 @@ object MyInterpreter {
         }
         result.add(prefix)
 
-        if(timeZone!=null) timeZone += (f.deferTime ?: f.beginTime ?: "全时")
+        if(timeZone!=null) timeZone += (deferTime ?: f.beginTime ?: "全时")
         if(timeZone!=null) timeZone += " @" + (f.lists ?: "未定场合").toString().removeSurrounding("[", "]").replace(",","、")
 
         result.add(timeZone)
