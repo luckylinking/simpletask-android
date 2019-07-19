@@ -1,5 +1,10 @@
 Changelog
 =========
+2019-07-19
+
+非当日事务不按推迟时间分组
+修改thresholdDate或deferDate时删除deferTime
+
 2019-05-28
 
 增加若干字段：
