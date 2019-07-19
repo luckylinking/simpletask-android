@@ -111,6 +111,7 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                 } else {
                     upsertToken(DeferToken(dateStr))
                 }
+                tokens = tokens.filter { it !is DeferTimeToken } //修改thresholdDate或deferDate时删除deferTime
             }
         }
 
@@ -121,6 +122,7 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                 tokens = tokens.filter { it !is DeferToken }
             } else {
                 upsertToken(DeferToken(dateStr))
+                tokens = tokens.filter { it !is DeferTimeToken } //修改thresholdDate或deferDate时删除deferTime
             }
         }
 
