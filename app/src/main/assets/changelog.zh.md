@@ -1,36 +1,60 @@
 Changelog
 =========
-2019-07-19
 
-非当日事务不按推迟时间分组
-修改thresholdDate或deferDate时删除deferTime
+2020-03-06
+-------
+建议排序方式：主分组、创建/完成日期（逆序）、中间分组、有无标签、标签、优先级、截止日期 、字母顺序、文件内部顺序
+
+修改主分组：
+- 0 便签、INBOX - 新收集的想法或任务
+    - 无启动日期、回顾日期、项目、清单的任务
+- 1 置顶、TOP - 置顶任务和提示
+- 2 当前日常、CURRENT - 已经启动的任务
+    -  启动日期在今日之前的任务
+    -  今日启动已到开始时间的非关键任务
+- 3 今日关键、CRITICAL-TODAY - 今日必须完成的时效性任务，拖延可能造成你要加班或任务失败（建议不超过五条）
+    - 今日或之前截止日期的任务
+    - 今日或之前启动且有结束时间或设置了提醒的任务
+- 4 今日待办、TODO-TODAY - 今天计划要做的任务（其中高优先级者为重要任务，是当前价值最高、收益最大，应该投入主要精力的工作，建议不超过五条）
+    - 除3、2、5项之外启动日期在今日或之前的任务
+- 6 今日日常、DAILY-TODAY - 今天的日常例行事务
+    - 非优先级任务中启动日期在今日的每日、每工作日事务（未到开始时间）
+- 5 今日过目、REVIEW-TODAY - 今天查看、考虑一下再根据情况做决定的任务（建议不超过二十条）
+    - 回顾日期在今日或之前的任务
+    - 无回顾日期任务中
+        - 无启动日期的任务、启动日期在十天内的任务、截止日期在十天（十五天？）内的任务
+            - 非无优先级的每日、每工作日（有启动日期）任务 
+- 8 近期日常、NEAR-FUTURE-DAILY - 十日内的日常例行事务
+    - 启动日期在十天内，非以上的每日、每工作日任务
+- 7 日后事务、FUTURE-TASKS - 日后再查看和处理的事务
+    - 不属于以上的其他任务
+- 9 已完成、COMPLETED - 已经完成的任务
+
+增加review date字段：r:YYYY-MM-DD
+
+2019-07-19
+-------
+- 修改thresholdDate或deferDate时删除deferTime
 
 2019-05-28
-
-增加若干字段：
-
-置底字段： bottom:xx              置底标记
-开始时间字段： begin:HH:MM        任务的开始时间（时：分）
-结束时间字段： end:HH:MM          任务的结束时间（时：分）
-推迟时间字段： defer:HH:MM         将任务推迟到当日某时间开始（时：分）
-
-重新修改了排序方法
-
-一些界面显示的修改：
-使用三级标题（第一级：日期分段，第二集：开始或推迟时间，第三级：项目/标签）
-修改（添加）任务底部显示项：创建日期、到期日期、启动日期；推迟日期；开始时间、推迟时间、结束时间、重复方式
-修改推迟菜单，可选择推迟到一周内的某天（显示星期几）
+-------
+- 增加若干字段：
+    - 置底字段： bottom:xx              置底标记
+    - 开始时间字段： begin:HH:mm        任务的开始时间（时：分）
+    - 结束时间字段： end:HH:mm          任务的结束时间（时：分）
+    - 推迟时间字段： defer:HH:mm         将任务推迟到当日某时间开始（时：分）
+-   修改（添加）任务底部显示项：创建日期、到期日期、启动日期；推迟日期；开始时间、推迟时间、结束时间、重复方式
+-   修改推迟菜单，可选择推迟到一周内的某天（显示星期几）
 
 2018-07-27
-
-添加推迟日期显示
+-------
+- 添加推迟日期显示
 fun getRelativeDeferDate(task: Task, app: TodoApplication): String? {
     val date = task.deferDate ?: return null
     val S1 = getRelativeDate(app, "D: ", date).toString()
     val S2 = MyInterpreter.daysBetween(date, task.thresholdDate).toString()
     return "$S1 已推迟 $S2 天"
 }
-
 
 - 添加defer字段：d:xxxx-xx-xx，将启动日期延迟到某日（用于需要保留原始启动日期的情况，重复任务在生成新任务时自动删除）
 - 添加top字段：top:XX，标记将任务置顶
@@ -96,55 +120,3 @@ data class TopToken(override val valueStr : String) : KeyValueToken {
 - 日期显示中添加星期几（Util.kt 第631行添加     val weekString = MyInterpreter.dateToWeek(dateString)
                                第652行改为    val ss = SpannableString(prefix + s + " " + weekString)
                                ）
-
-2018-07-20
--------
-- SimpleTask改为 “事务”
-- in_future 改为“启动日期（未启动任务按倒序）”
-- by_lua 改为“我的自定义规则”
-- by_threshold_date 改为“是否有截止日期” （避免多次按启动日期排序浪费时间）
-
-- 新增MyInterpreter.kt
-- 修改MultiComparator.kt中in_future
-    "in_future" -> comp = { MyInterpreter.onThresholdSort(it, today) }
-    "by_threshold_date" -> comp = { it.dueDate != null }
-    "by_lua" -> comp = { MyInterpreter.onSortCallback(it, today, seconds)}
-并新增seconds输入参数 seconds: Int,
-- 修改TodoList中调用MultiComparator行，添加MyInterpreter.secondsNow(), 以匹配seconds输入参数
-- 修改Util.kt，在181行替换null为MyInterpreter.onGroupCallback(t)
-
-说明:
-自定义排序/分组
-    已完成：
-        分组为“已完成”
-
-    第一排序/分组：
-        指定任务为特定分组5
-        有启动日期但未启动的，
-            明日启动的为明日任务7，
-            十日内启动的为十日内任务8，
-            十日外启动的为十日外任务9
-        己启动或无启动日期的，
-            有启动日期或有截止日期的，为当前任务（不注明）4，
-            无启动日期且无截止日期的，有标签的为备忘任务6，否则为收集任务1
-        有置顶标记的为置顶任务0
-    第二排序/分组
-        已到下一周期的周期任务列入到期任务1(仅对"+1d"起作用，"+1b"视同)
-        今日已经到期的任务列入到期任务1
-        其余截止日期的任务列入限期任务2
-        无截止日期9
-    第三排序/分组
-        同类任务按当日时段排序/分组
-    第四分组
-        同时段同优先级按标签分组(无标签为一般事务)
-
-排序推荐：
-    1. 已完成（正序）
-    2. 自定义（正序）
-    3. 是否有截止日期（逆序）
-    4. 优先级（正序）
-    5. 标签（正序）
-    6. 截止日期（正序）
-    6. 启动日期（未启动任务按倒序）(逆序)
-    7. 清单
-

@@ -6,7 +6,7 @@ import nl.mpcjanssen.simpletask.util.alfaSort
 import java.util.*
 import nl.mpcjanssen.simpletask.MyInterpreter
 
-class MultiComparator(sorts: ArrayList<String>, today: String, hourMinutesNow: String, caseSensitve: Boolean, createAsBackup: Boolean, moduleName: String? = null) {
+class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createAsBackup: Boolean, moduleName: String? = null, taskGroup2By: String? = null) {
     var comparator : Comparator<Task>? = null
 
     var fileOrder = true
@@ -57,20 +57,28 @@ class MultiComparator(sorts: ArrayList<String>, today: String, hourMinutesNow: S
                     { it.alphaParts.toLowerCase(Locale.getDefault()) }
                 }
                 "by_prio" -> comp = { it.priority }
-                "completed" -> comp = { it.isCompleted() }
+//                "completed" -> comp = { it.isCompleted() }
+                "completed" -> comp = {                 //改为按创建或完成时间排序
+                    when (MyInterpreter.group1(it)) {
+                        Groups.INBOX -> it.createDate ?: "1970-01-01"
+                        Groups.COMPLETED -> it.completionDate ?: "1970-01-01"
+                        else -> "1970-01-01"
+                    }
+                }
                 "by_creation_date" -> comp = { it.createDate ?: lastDate }
 //                "in_future" -> comp = { it.inFuture(today) }
+                "in_future" -> comp = { when (it.tags.isNullOrEmpty()) {    //     改为按有无标签排序
+                    true -> "0"
+                    false -> "1"
+                } }
                 "by_due_date" -> comp = { it.dueDate ?: lastDate }
 //                "by_threshold_date" -> comp = {
 //                    val fallback = if (createAsBackup) it.createDate ?: lastDate else lastDate
 //                    it.thresholdDate ?: fallback
 //                }
-// +modify
-                "in_future" -> comp = { MyInterpreter.onThresholdSort(it, today) }
-                "by_threshold_date" -> comp = { it.dueDate != null }
-// -modify
+                "by_threshold_date" -> comp = { MyInterpreter.onSortCallback(it, taskGroup2By) }    //改为按中间分组排序
                 "by_completion_date" -> comp = { it.completionDate ?: lastDate }
-                "by_lua" -> comp = { MyInterpreter.onSortCallback(it, today, hourMinutesNow)}
+                "by_lua" -> comp = { MyInterpreter.firstGrouping(it).sort }         //改为按主分组排序
 
                 else -> {
                     Log.w("MultiComparator", "Unknown sort: $sort")
@@ -86,3 +94,4 @@ class MultiComparator(sorts: ArrayList<String>, today: String, hourMinutesNow: S
     }
 
 }
+

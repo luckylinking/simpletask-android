@@ -51,6 +51,7 @@ data class Query(val luaModule: String) {
     var hideTags = false
     var hideCreateDate = false
     var createIsThreshold = false
+    var taskGroup2By: String? = null
     var useScript: Boolean = false
     var script: String? = null
     var scriptTestTask: String? = null
@@ -94,6 +95,7 @@ data class Query(val luaModule: String) {
             put(INTENT_HIDE_CREATE_DATE_FILTER, hideCreateDate)
             put(INTENT_HIDE_HIDDEN_FILTER, hideHidden)
             put(INTENT_CREATE_AS_THRESHOLD, createIsThreshold)
+            put(INTENT_TASKGROUP2_KEY, taskGroup2By)
             put(INTENT_SCRIPT_FILTER, script)
             put(INTENT_USE_SCRIPT_FILTER, useScript)
             put(INTENT_SCRIPT_TEST_TASK_FILTER, scriptTestTask)
@@ -135,6 +137,7 @@ data class Query(val luaModule: String) {
                 INTENT_HIDE_HIDDEN_FILTER)
         createIsThreshold = json.optBoolean(
                 INTENT_CREATE_AS_THRESHOLD)
+        taskGroup2By = json.optString(INTENT_TASKGROUP2_KEY)
         search = json.optString(SearchManager.QUERY)
         if (sorts != null && sorts != "") {
             m_sorts = ArrayList(
@@ -237,6 +240,7 @@ data class Query(val luaModule: String) {
         prioritiesNot = false
         contextsNot = false
         useScript = false
+        taskGroup2By = null
         return this
     }
 
@@ -357,6 +361,7 @@ data class Query(val luaModule: String) {
         const val INTENT_HIDE_CREATE_DATE_FILTER = "HIDECREATEDATE"
 
         const val INTENT_CREATE_AS_THRESHOLD = "CREATEISTHRESHOLD"
+        const val INTENT_TASKGROUP2_KEY = "TASKGROUP2_KEY"
 
         const val INTENT_USE_SCRIPT_FILTER = "USE_SCRIPT"
         const val INTENT_LUA_MODULE = "MODULE"
@@ -403,6 +408,7 @@ data class Query(val luaModule: String) {
                     INTENT_HIDE_CREATE_DATE_FILTER, false)
             hideHidden = intent.getBooleanExtra(
                     INTENT_HIDE_HIDDEN_FILTER, true)
+            taskGroup2By = intent.getStringExtra(INTENT_TASKGROUP2_KEY)
             search = intent.getStringExtra(SearchManager.QUERY)
             if (sorts != null && sorts != "") {
                 m_sorts = ArrayList(
@@ -445,6 +451,7 @@ data class Query(val luaModule: String) {
             hideHidden = prefs.getBoolean(INTENT_HIDE_HIDDEN_FILTER, true)
             search = prefs.getString(SearchManager.QUERY, null)
             script = prefs.getString(INTENT_SCRIPT_FILTER, null)
+            taskGroup2By = prefs.getString(INTENT_TASKGROUP2_KEY, null)
             scriptTestTask = prefs.getString(INTENT_SCRIPT_TEST_TASK_FILTER, null)
         }
         return this

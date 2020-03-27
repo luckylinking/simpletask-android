@@ -110,6 +110,7 @@ class AddTask : ThemedActionBarActivity() {
             btnPrio.setOnClickListener { showPriorityMenu() }
             btnDue.setOnClickListener { insertDate(DateType.DUE) }
             btnThreshold.setOnClickListener { insertDate(DateType.THRESHOLD) }
+            btnReview.setOnClickListener { insertDate(DateType.REVIEW) }
             btnNext.setOnClickListener { addPrefilledTask() }
             btnSave.setOnClickListener { saveTasksAndClose() }
             taskText.requestFocus()
@@ -263,10 +264,13 @@ class AddTask : ThemedActionBarActivity() {
     }
 
     private fun insertDate(dateType: DateType) {
-        var titleId = R.string.defer_due
-        if (dateType === DateType.THRESHOLD) {
-            titleId = R.string.defer_threshold
-        }
+        val titleId =
+            when (dateType) {
+                DateType.DUE -> R.string.defer_due
+                DateType.THRESHOLD -> R.string.defer_threshold
+                DateType.REVIEW -> R.string.defer_review
+            }
+
         val d = createDeferDialog(this, titleId, object : InputDialogListener {
             /*
                 Deprecated functions still work fine.
@@ -306,10 +310,10 @@ class AddTask : ThemedActionBarActivity() {
     }
 
     private fun replaceDate(dateType: DateType, date: String) {
-        if (dateType === DateType.DUE) {
-            replaceDueDate(date)
-        } else {
-            replaceThresholdDate(date)
+        when (dateType) {
+            DateType.DUE -> replaceDueDate(date)
+            DateType.THRESHOLD -> replaceThresholdDate(date)
+            DateType.REVIEW -> replaceReviewDate(date)
         }
     }
 
@@ -451,6 +455,28 @@ class AddTask : ThemedActionBarActivity() {
         if (currentLine != -1) {
             val t = Task(lines[currentLine])
             t.thresholdDate = newThresholdDate.toString()
+            lines[currentLine] = t.inFileFormat()
+            taskText.setText(join(lines, "\n"))
+        }
+        restoreSelection(start, length, false)
+    }
+
+    private fun replaceReviewDate(newReviewDate: CharSequence) {
+        // save current selection and length
+        val start = taskText.selectionStart
+        val length = taskText.text.length
+        val lines = ArrayList<String>()
+        Collections.addAll(lines, *taskText.text.toString().split("\\n".toRegex()).toTypedArray())
+
+        // For some reason the currentLine can be larger than the amount of lines in the EditText
+        // Check for this case to prevent any array index out of bounds errors
+        var currentLine = getCurrentCursorLine()
+        if (currentLine > lines.size - 1) {
+            currentLine = lines.size - 1
+        }
+        if (currentLine != -1) {
+            val t = Task(lines[currentLine])
+            t.reviewDate = newReviewDate.toString()
             lines[currentLine] = t.inFileFormat()
             taskText.setText(join(lines, "\n"))
         }

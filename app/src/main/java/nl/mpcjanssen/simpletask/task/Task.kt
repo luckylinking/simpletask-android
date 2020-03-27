@@ -100,11 +100,22 @@ class Task(text: String, defaultPrependedDate: String? = null) {
             }
         }
 
+    var reviewDate: String?
+        get() = getFirstToken<ReviewDateToken>()?.valueStr
+        set(dateStr) {
+            if (dateStr.isNullOrEmpty()) {
+                tokens = tokens.filter { it !is ReviewDateToken }
+            } else {
+                upsertToken(ReviewDateToken(dateStr))
+            }
+        }
+
     var thresholdDate: String?
         get() = getFirstToken<ThresholdDateToken>()?.valueStr
         set(dateStr) {
             if (dateStr.isNullOrEmpty()) {
                 tokens = tokens.filter { it !is ThresholdDateToken }
+                tokens = tokens.filter { it !is DeferToken }    //删除thresholdDate的同时删除deferDate
             } else {
                 if (thresholdDate == null) {
                     upsertToken(ThresholdDateToken(dateStr))
@@ -168,6 +179,10 @@ class Task(text: String, defaultPrependedDate: String? = null) {
 
     var recurrencePattern: String? = null
         get() = getFirstToken<RecurrenceToken>()?.valueStr
+
+    var topPattern: String? = null
+        get() = getFirstToken<TopToken>()?.valueStr
+
 
     var tags: SortedSet<String>? = null
         get() {
@@ -237,7 +252,10 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                 if (newTask.dueDate != null) {
                     newTask.deferDueDate(pattern, deferFromDate)
                 }
-
+                if (newTask.reviewDate != null) {
+                    newTask.deferReviewDate(pattern, deferFromDate)
+                }
+                
                 if (deferFromDate == "") deferFromDate = newTask.thresholdDate?: "" //避免后面因为取消threshouldDate后丢失重复日期基准的问题
                 if (newTask.thresholdDate != null) {
                     newTask.thresholdDate = null    //加上此操作，保证不会将日期设置为DeferDate
@@ -298,6 +316,24 @@ class Task(text: String, defaultPrependedDate: String? = null) {
         dueDate = newDate?.format(DATE_FORMAT)
     }
 
+    fun deferReviewDate(deferString: String, deferFromDate: String) {
+        if (MATCH_SINGLE_DATE.reset(deferString).matches()) {
+            reviewDate = deferString
+            return
+        }
+        if (deferString == "") {
+            reviewDate = null
+            return
+        }
+        val olddate: String? = if (deferFromDate.isEmpty()) {
+            reviewDate
+        } else {
+            deferFromDate
+        }
+        val newDate = addInterval(olddate, deferString)
+        reviewDate = newDate?.format(DATE_FORMAT)
+    }
+
     fun inFileFormat() = text
 
     fun inFuture(today: String): Boolean {
@@ -318,6 +354,12 @@ class Task(text: String, defaultPrependedDate: String? = null) {
 
     fun onBottom(): Boolean {
         return getFirstToken<BottomToken>()?.value ?: false
+    }
+
+    fun isDaily(): Boolean {
+        val rec = recurrencePattern ?: return false
+        if (rec == "1d" || rec == "+1d" ||rec == "1b" || rec == "+1b") return true
+        return  false
     }
 
     fun isCompleted(): Boolean {
@@ -408,6 +450,7 @@ class Task(text: String, defaultPrependedDate: String? = null) {
         private val MATCH_BEGIN = Pattern.compile("[Bb][Ee][Gg][Ii][Nn]:(\\d{2}:\\d{2})").matcher("")
         private val MATCH_END = Pattern.compile("[Ee][Nn][Dd]:(\\d{2}:\\d{2})").matcher("")
         private val MATCH_DEFER_TIME = Pattern.compile("[Dd][Ee][Ff][Ee][Rr]:(\\d{2}:\\d{2})").matcher("")
+        private val MATCH_REVIEW = Pattern.compile("[Rr]:(\\d{4}-\\d{2}-\\d{2})").matcher("")
 
 
 
@@ -508,7 +551,12 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                             return@forEach
                         }
                     }
-
+                    MATCH_REVIEW.reset(lexeme).apply {
+                        if (matches()) {
+                            tokens.add(ReviewDateToken(group(1)))
+                            return@forEach
+                        }
+                    }
                     MATCH_BEGIN.reset(lexeme)?.apply {
                         if (matches()) {
                             tokens.add(BeginTimeToken(group(1)))
@@ -705,4 +753,8 @@ data class EndTimeToken(override val valueStr : String) : KeyValueToken {
 
 data class DeferTimeToken(override val valueStr : String) : KeyValueToken {
     override val key = "defer"
+}
+
+data class ReviewDateToken(override val valueStr : String) : KeyValueToken {
+    override val key = "r"
 }

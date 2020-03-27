@@ -17,24 +17,36 @@
         /> -->
     <CheckBoxPreference
         android:defaultValue="false"
+        android:key="@string/force_english"
+        android:title="@string/force_english_title"
+        />
+    <CheckBoxPreference
+        android:defaultValue="false"
         android:key="@string/custom_font_size"
         android:title="@string/font_size_delta_pref_title"
         />
-    <CheckBoxPreference
-            android:defaultValue="false"
-            android:key="@string/force_english"
-            android:title="@string/force_english_title"
-    />
     <com.robobunny.SeekBarPreference
         xmlns:robobunny="http://robobunny.com"
         android:dependency="@string/custom_font_size"
         android:key="@string/font_size"
-        android:defaultValue="14"
+        android:defaultValue="20"
         android:max="36"
         robobunny:min="12"
         robobunny:interval="2"
         robobunny:unitsLeft=""
         robobunny:unitsRight="sp"
+        />
+    <com.robobunny.SeekBarPreference
+        xmlns:robobunny="http://robobunny.com"
+        android:dependency="@string/custom_font_size"
+        android:defaultValue="80"
+        android:key="@string/header_relative_size"
+        android:max="200"
+        android:title="@string/header_relative_size_summary"
+        robobunny:interval="1"
+        robobunny:min="0"
+        robobunny:unitsLeft=""
+        robobunny:unitsRight="%"
         />
     <CheckBoxPreference
         android:defaultValue="true"
@@ -49,7 +61,7 @@
     <com.robobunny.SeekBarPreference
         xmlns:robobunny="http://robobunny.com"
         android:dependency="@string/taskview_extended_pref_key"
-        android:defaultValue="80"
+        android:defaultValue="65"
         android:key="@string/datebar_relative_size"
         android:max="100"
         android:title="@string/datebar_relative_size_summary"

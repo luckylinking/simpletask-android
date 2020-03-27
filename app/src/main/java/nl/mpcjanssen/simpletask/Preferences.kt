@@ -83,7 +83,8 @@ class Preferences : ThemedPreferenceActivity(), SharedPreferences.OnSharedPrefer
                 localBroadcastManager.sendBroadcast(broadcastIntent)
             }
             getString(R.string.custom_font_size),
-            getString(R.string.font_size) -> {
+            getString(R.string.font_size),
+            getString(R.string.header_relative_size) -> {
                 val broadcastIntent = Intent(Constants.BROADCAST_MAIN_FONTSIZE_CHANGED)
                 localBroadcastManager.sendBroadcast(broadcastIntent)
             }

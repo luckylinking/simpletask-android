@@ -603,7 +603,11 @@ class Simpletask : ThemedNoActionBarActivity() {
                     if (Config.showTodoPath) {
                         title = Config.todoFileName.replace("([^/])[^/]*/".toRegex(), "$1/")
                     } else {
-                        setTitle(R.string.app_label)
+                        title =
+                            if (MyInterpreter.originDate?:TodoApplication.app.today == TodoApplication.app.today)
+                                "今日"
+                            else
+                                MyInterpreter.originDate?:TodoApplication.app.today
                     }
                     toggle.isDrawerIndicatorEnabled = true
                     fab.visibility = View.VISIBLE
@@ -752,10 +756,13 @@ class Simpletask : ThemedNoActionBarActivity() {
     }
 
     private fun deferTasks(tasks: List<Task>, dateType: DateType) {
-        var titleId = R.string.defer_due
-        if (dateType === DateType.THRESHOLD) {
-            titleId = R.string.defer_threshold
-        }
+        val titleId =
+            when (dateType) {
+                DateType.DUE -> R.string.defer_due
+                DateType.THRESHOLD -> R.string.defer_threshold
+                DateType.REVIEW -> R.string.defer_review
+            }
+
         val d = createDeferDialog(this, titleId, object : InputDialogListener {
             /* Suppress showCalendar deprecation message. It works fine on older devices
              * and newer devices don't really have an alternative */
@@ -800,6 +807,42 @@ class Simpletask : ThemedNoActionBarActivity() {
             invalidateOptionsMenu()
         }
         showConfirmationDialog(this, R.string.delete_task_message, delete, title)
+    }
+
+    private fun setDateOrigin() {
+        val titleId = R.string.set_date_origin
+
+        val d = createDeferDialog(this, titleId, object : InputDialogListener {
+            /* Suppress showCalendar deprecation message. It works fine on older devices
+             * and newer devices don't really have an alternative */
+            @Suppress("DEPRECATION")
+            override fun onClick(input: String) {
+                if (input == "pick") {
+                    val today = DateTime.today(TimeZone.getDefault())
+                    val dialog = DatePickerDialog(this@Simpletask, DatePickerDialog.OnDateSetListener { _, year, month, day ->
+                        var startMonth = month
+                        startMonth++
+                        val date = DateTime.forDateOnly(year, startMonth, day)
+                        MyInterpreter.originDate = date.format(Constants.DATE_FORMAT)
+                        TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                    },
+                        today.year!!,
+                        today.month!! - 1,
+                        today.day!!)
+
+                    val showCalendar = Config.showCalendar
+                    dialog.datePicker.calendarViewShown = showCalendar
+                    dialog.datePicker.spinnersShown = !showCalendar
+                    dialog.show()
+                } else {
+
+                    MyInterpreter.originDate = input
+                    TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                }
+
+            }
+        })
+        d.show()
     }
 
     private fun archiveTasks(showDialog: Boolean = true) {
@@ -870,6 +913,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             R.id.sync -> {
                 broadcastFileSync(TodoApplication.app.localBroadCastManager)
             }
+            R.id.origin_date -> setDateOrigin()
             R.id.archive -> archiveTasks(true)
             R.id.open_file -> TodoApplication.app.browseForNewFile(this)
             R.id.history -> startActivity(Intent(this, HistoryScreen::class.java))
@@ -878,6 +922,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             R.id.update -> startAddTaskActivity()
             R.id.defer_due -> deferTasks(checkedTasks, DateType.DUE)
             R.id.defer_threshold -> deferTasks(checkedTasks, DateType.THRESHOLD)
+            R.id.defer_review -> deferTasks(checkedTasks, DateType.REVIEW)
             R.id.priority -> prioritizeTasks(checkedTasks)
             R.id.update_lists -> updateLists(checkedTasks)
             R.id.update_tags -> updateTags(checkedTasks)

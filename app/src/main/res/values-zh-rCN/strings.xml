@@ -89,7 +89,8 @@
     <string name="resume_sync_pref_title">恢复同步</string>
     <string name="resume_sync_pref_summary">打开应用时与 Dropbox 云同步。</string>
     <string name="font_size_delta_pref_title">自定义字体尺寸</string>
-    <string name="datebar_relative_size_summary">日期栏使用相对尺寸</string>
+    <string name="datebar_relative_size_summary">日期栏相对尺寸</string>
+    <string name="header_relative_size_summary">组标题相对尺寸</string>
     <string name="font_size_delta_pref_summary">更改字体尺寸。</string>
     <string name="theme_pref_title">显示主题</string>
     <string name="theme_pref_summary">更改应用的显示主题。</string>
@@ -138,7 +139,7 @@
     <string name="action_settings">设置</string>
     <string name="name">名称</string>
     <string name="date">日期</string>
-    <string name="help_locale">en</string>
+    <string name="help_locale">zh</string>
     <string name="calendar_write_error">错误︰无法写入日历</string>
     <string name="click_to_copy">单击复制到剪贴板。</string>
     <string name="donated_summary">感谢您的捐助。</string>
@@ -235,7 +236,7 @@
     <string name="task_text_ellipsizing_middle">省略中间：很……本</string>
     <string name="task_text_ellipsizing_marquee">滚动：很长的任</string>
     <string name="saved_filters_imported">筛选器已导入</string>
-    <string name="use_create_as_threshold_title">创建时间作为启动时间</string>
+    <string name="use_create_as_threshold_title">创建日期作为启动日期</string>
     <string name="logout_message">请确保您已经将所有的更改与dropbox云同步或者在未连接到dropbox时分享了您全部的任务清单。
 \n所有未同步的更改将会在退出登录后丢失。</string>
     <string name="dropbox_open">请确保您已经将所有的更改与dropbox云同步或者在未连接到dropbox时分享了您全部的任务清单。
@@ -252,13 +253,13 @@
     <string name="by_context">清单</string>
     <string name="by_project_todotxt">项目</string>
     <string name="by_context_todotxt">场景</string>
-    <string name="completed">己完成</string>
+    <string name="completed">创建（便签）/完成日期（已完成）</string>
     <string name="by_creation_date">创建日期</string>
-    <string name="in_future">启动日期（未启动任务按倒序）</string>
+    <string name="in_future">有无标签</string>
     <string name="by_due_date">截止日期</string>
-    <string name="by_threshold_date">是否有截止日期</string>
+    <string name="by_threshold_date">中间分组</string>
     <string name="by_completion_date">完成日期</string>
-    <string name="by_lua">我的自定义规则</string>
+    <string name="by_lua">主分组</string>
     <string name="filter_select_all">选择全部</string>
     <string name="filter_clear_all">清除筛选器</string>
     <string name="filter_invert">反向筛选</string>
@@ -275,7 +276,7 @@
     <string name="filter_show_future">显示未到启动日期的任务</string>
     <string name="filter_show_lists">在任务文本中显示清单</string>
     <string name="filter_show_tags">在任务文本中显示标签</string>
-    <string name="filter_show_create_date">显示任务创建时间</string>
+    <string name="filter_show_create_date">隐藏有启动或回顾日期任务的创建日期</string>
     <string name="filter_show_completed_short">已完成</string>
     <string name="filter_show_future_short">未启动</string>
     <string name="filter_show_prompt">显示</string>
@@ -349,4 +350,10 @@
     <string name="use_list_and_tags_icons_title">使用图标</string>
     <string name="use_list_and_tags_icons_summary">使用图标更改任务的列表和标记。如使用todo.txt@和+来更改请禁用此项。</string>
     <string name="force_english_title">强制使用英文</string>
+    <string name="group2_content_select_title">第二层标题使用：</string>
+    <string name="group2_content_select_summary">选择第二层标题使用 优先级、限期或空白</string>
+    <string name="defer_review">设置回顾日期</string>
+    <string name="date_origin">基准日期</string>
+    <string name="set_date_origin">设置基准日期</string>
+
 </resources>

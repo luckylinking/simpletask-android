@@ -71,5 +71,5 @@ object Constants {
 }
 
 enum class DateType {
-    DUE, THRESHOLD
+    DUE, THRESHOLD, REVIEW
 }

@@ -134,7 +134,7 @@ fun createParentDirectory(dest: File?) {
     }
 }
 
-fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: String, createIsThreshold : Boolean, moduleName : String?): List<VisibleLine> {
+fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: String, createIsThreshold : Boolean, moduleName : String?, taskGroup2by : String?): List<VisibleLine> {
     var firstGroupSortIndex = 0
     if (sorts.size > 1 && sorts[0].contains("completed") || sorts[0].contains("future")) {
         firstGroupSortIndex++
@@ -142,143 +142,72 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
             firstGroupSortIndex++
         }
     }
-    val firstSort = sorts[firstGroupSortIndex]
+//    val firstSort = sorts[firstGroupSortIndex]
 
-    var header1 = ""
-    var header2:String? = ""
-    var header3:String? = ""
     val result = ArrayList<VisibleLine>()
-    var count1 = 0
-    var count2 = 0
-    var count3 = 0
-    var showCount:String? = ""
-    var headerLine1: HeaderLine? = null
-    var headerLine2: HeaderLine? = null
-    var headerLine3: HeaderLine? = null
-    val luaGrouping = moduleName != null && Interpreter.hasOnGroupCallback(moduleName)
+
+    var header = ArrayList<String?>()
+    var count = ArrayList<Int>()
+    var headerLines = ArrayList<HeaderLine?>()
+
     for (item in visibleTasks) {
-        val t = item
-        val header = MyInterpreter.onGroupCallback(t)
-        val newHeader1 = if (moduleName != null && luaGrouping) {
-            Interpreter.onGroupCallback(moduleName, t)
-        } else {
-//            null
-            header[0]
-        } ?: t.getHeader(firstSort, no_header, createIsThreshold)
+        var newHeader = MyInterpreter.onGroupCallback(item, taskGroup2by)
+//        newHeader.add(item.getHeader(firstSort, no_header, createIsThreshold))
+        val n = newHeader.size
 
-        val newHeader2 = header[1]
-        val newHeader3 = header[2]
-        if (header1 != newHeader1) {
+        while(header.size < n) header.add("")
+        while(count.size < n) count.add(0)
+        while(headerLines.size < n) headerLines.add(null)
 
-            if (headerLine1 != null && showCount != null) {
-                headerLine1.title += " ($count1)"
+        for(i in 1 until n) {
+            if (header[i] != newHeader[i]) {
+                for(j in i until n) {
+                    if(headerLines[j] != null) {
+                        headerLines[j]!!.title += "（${count[j]}）"
+                    }
+                    if(newHeader[j] != null) {
+                        headerLines[j] = HeaderLine(newHeader[j]?:"", j)
+                        if (i == j) result.add(HeaderLine("", j))
+                        result.add(headerLines[j]!!)
+                    } else {
+                        headerLines[j] = null
+                    }
+                    count[j] = 0
+                    header[j] = newHeader[j]
+                }
+                break
             }
-            headerLine1 = HeaderLine(newHeader1)
-            count1 = 0
-            result.add(headerLine1)
-            header1 = newHeader1
-
-            if (headerLine2 != null) {
-                headerLine2.title += " ($count2)"
-            }
-            if(newHeader2 != null) {
-                headerLine2 = HeaderLine(newHeader2)
-                result.add(headerLine2)
-            } else {
-                headerLine2 = null
-            }
-            count2 = 0
-            header2 = newHeader2
-
-            if (headerLine3 != null) {
-                headerLine3.title += " ($count3)"
-            }
-            if(newHeader3 != null) {
-                headerLine3 = HeaderLine(newHeader3)
-                result.add(headerLine3)
-            } else {
-                headerLine3 = null
-            }
-            count3 = 0
-            header3 = newHeader3
-
         }
-
-        if (header2 != newHeader2) {
-
-            if (headerLine2 != null) {
-                headerLine2.title += " ($count2)"
-            }
-            if(newHeader2 != null) {
-                headerLine2 = HeaderLine(newHeader2)
-                result.add(headerLine2)
-            } else {
-                headerLine2 = null
-            }
-            count2 = 0
-            header2 = newHeader2
-
-            if (headerLine3 != null) {
-                headerLine3.title += " ($count3)"
-            }
-            if(newHeader3 != null) {
-                headerLine3 = HeaderLine(newHeader3)
-                result.add(headerLine3)
-            } else {
-                headerLine3 = null
-            }
-            count3 = 0
-            header3 = newHeader3
-
+        for(i in 1 until n) {
+            count[i]++
         }
-
-
-        if (header3 != newHeader3) {
-
-            if (headerLine3 != null) {
-                headerLine3.title += " ($count3)"
-            }
-            if(newHeader3 != null) {
-                headerLine3 = HeaderLine(newHeader3)
-                result.add(headerLine3)
-            } else {
-                headerLine3 = null
-            }
-            count3 = 0
-            header3 = newHeader3
-
-        }
-
-        count1++
-        count2++
-        count3++
-        showCount = header[3]
 
         val taskLine = TaskLine(item)
         result.add(taskLine)
     }
     // Add count to last header
-    if (headerLine1 != null && showCount != null) {
-        headerLine1.title += " ($count1)"
-    }
-    if (headerLine2 != null) {
-        headerLine2.title += " ($count2)"
-    }
-    if (headerLine3 != null) {
-        headerLine3.title += " ($count3)"
+    for ((i,e) in headerLines.withIndex()){
+        if(e != null) {
+            e.title += "（${count[i]}）"
+        }
     }
 
+    // Remove first empty header
+    if (result.size > 0 && result[0].header && result[0].title.isNullOrEmpty()) {
+        result.removeAt(0)
+    }
     // Clean up possible last empty list header that should be hidden
     val i = result.size
     if (i > 0 && result[i - 1].header) {
         result.removeAt(i - 1)
     }
+
     return result
 }
 
 fun addHeaderLines(visibleTasks: List<Task>, filter: Query, no_header: String): List<VisibleLine> {
     val sorts = filter.getSort(Config.defaultSorts)
-    return addHeaderLines(visibleTasks, sorts, no_header, filter.createIsThreshold, filter.luaModule)
+    return addHeaderLines(visibleTasks, sorts, no_header, filter.createIsThreshold, filter.luaModule, filter.taskGroup2By)
 }
 
 fun join(s: Collection<String>?, delimiter: String): String {
@@ -372,7 +301,7 @@ fun addInterval(date: DateTime?, interval: String): DateTime? {
 fun getCheckedItems(listView: ListView, checked: Boolean): ArrayList<String> {
     val checks = listView.checkedItemPositions
     val items = ArrayList<String>()
-    for (i in 0..checks.size() - 1) {
+    for (i in 0 until checks.size()) {
         val item = listView.adapter.getItem(checks.keyAt(i)) as String
         if (checks.valueAt(i) && checked) {
             items.add(item)
@@ -682,6 +611,11 @@ fun getRelativeThresholdDate(task: Task, app: TodoApplication): String? {
     return getRelativeDate(app, "起始: ", date).toString()
 }
 
+fun getRelativeReviewDate(task: Task, app: TodoApplication): String? {
+    val date = task.reviewDate ?: return null
+    return getRelativeDate(app, "回顾: ", date).toString()
+}
+
 fun getRelativeDueDate(task: Task, app: TodoApplication): SpannableString? {
     val date = task.dueDate ?: return null
     return getRelativeDate(app, "到期: ", date)
@@ -739,13 +673,15 @@ private fun getRelativeDate(app: TodoApplication, prefix: String, dateString: St
     val ss = SpannableString("$prefix$s $weekString")
 
     if (Config.hasColorDueDates && prefix == "到期: ") {
-        val dueTodayColor = ContextCompat.getColor(app, R.color.simple_green_light)
+        val dueTodayColor = ContextCompat.getColor(app, R.color.simple_orange_light)
         val overDueColor = ContextCompat.getColor(app, R.color.simple_red_light)
-        val dueTomorrowColor = ContextCompat.getColor(app, R.color.simple_blue_light)
+        val dueTomorrowColor = ContextCompat.getColor(app, R.color.simple_green_light)
+        val dueFutureColor = ContextCompat.getColor(app, R.color.simple_blue_light)
         when {
             days == 0 -> setColor(ss, dueTodayColor)
             date.lteq(now) -> setColor(ss, overDueColor)
             days == -1 -> setColor(ss, dueTomorrowColor)
+            days < -1 -> setColor(ss, dueFutureColor)
         }
     }
 

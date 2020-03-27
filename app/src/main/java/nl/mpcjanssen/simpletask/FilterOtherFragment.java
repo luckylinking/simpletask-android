@@ -10,7 +10,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
-
+import android.widget.RadioGroup;
+import android.widget.RadioButton;
 
 
 public class FilterOtherFragment extends Fragment {
@@ -23,6 +24,11 @@ public class FilterOtherFragment extends Fragment {
     private CheckBox cbHideCreateDate;
     private CheckBox cbHideHidden;
     private CheckBox cbCreateAsThreshold;
+    private RadioGroup rgTaskGroup2;
+    private RadioButton rbTaskGroup2;
+//    private RadioButton rbTaskGroup2Due;
+//    private RadioButton rbTaskGroup2None;
+//    private RadioButton rbTaskGroup2Prio;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -47,6 +53,7 @@ public class FilterOtherFragment extends Fragment {
         outState.putBoolean(Query.INTENT_HIDE_TAGS_FILTER, getHideTags());
         outState.putBoolean(Query.INTENT_HIDE_CREATE_DATE_FILTER, getHideCreateDate());
         outState.putBoolean(Query.INTENT_CREATE_AS_THRESHOLD, getCreateAsThreshold());
+        outState.putString(Query.INTENT_TASKGROUP2_KEY, getTaskGroup2By());
     }
 
     @Override
@@ -67,6 +74,19 @@ public class FilterOtherFragment extends Fragment {
         cbHideCreateDate = layout.findViewById(R.id.cb_show_create_date);
         cbHideHidden = layout.findViewById(R.id.cb_show_hidden);
         cbCreateAsThreshold = layout.findViewById(R.id.cb_create_is_threshold);
+        rgTaskGroup2 = layout.findViewById(R.id.rg_task_g2);
+        rbTaskGroup2 = layout.findViewById(rgTaskGroup2.getCheckedRadioButtonId());
+//        rbTaskGroup2Due = layout.findViewById(R.id.rg_task_g2_due);
+//        rbTaskGroup2None = layout.findViewById(R.id.rg_task_g2_none);
+//        rbTaskGroup2Prio = layout.findViewById(R.id.rg_task_g2_prio);
+
+        rgTaskGroup2.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup arg0, int arg1) {
+                rbTaskGroup2 = arg0.findViewById(arg0.getCheckedRadioButtonId());
+            }
+        });
+
         if (savedInstanceState != null) {
             cbHideCompleted.setChecked(!savedInstanceState.getBoolean(Query.INTENT_HIDE_COMPLETED_FILTER, false));
             cbHideFuture.setChecked(!savedInstanceState.getBoolean(Query.INTENT_HIDE_FUTURE_FILTER, false));
@@ -75,6 +95,9 @@ public class FilterOtherFragment extends Fragment {
             cbHideCreateDate.setChecked(!savedInstanceState.getBoolean(Query.INTENT_HIDE_CREATE_DATE_FILTER, false));
             cbHideHidden.setChecked(!savedInstanceState.getBoolean(Query.INTENT_HIDE_HIDDEN_FILTER, true));
             cbCreateAsThreshold.setChecked(savedInstanceState.getBoolean(Query.INTENT_CREATE_AS_THRESHOLD, false));
+//            rbTaskGroup2Due.setChecked(savedInstanceState.getString(Query.INTENT_TASKGROUP2_KEY) == "限期");
+//            rbTaskGroup2None.setChecked(savedInstanceState.getString(Query.INTENT_TASKGROUP2_KEY) == "优先级");
+//            rbTaskGroup2Prio.setChecked(savedInstanceState.getString(Query.INTENT_TASKGROUP2_KEY) == "无");
         } else {
             cbHideCompleted.setChecked(!arguments.getBoolean(Query.INTENT_HIDE_COMPLETED_FILTER, false));
             cbHideFuture.setChecked(!arguments.getBoolean(Query.INTENT_HIDE_FUTURE_FILTER, false));
@@ -83,6 +106,9 @@ public class FilterOtherFragment extends Fragment {
             cbHideCreateDate.setChecked(!arguments.getBoolean(Query.INTENT_HIDE_CREATE_DATE_FILTER, false));
             cbHideHidden.setChecked(!arguments.getBoolean(Query.INTENT_HIDE_HIDDEN_FILTER, true));
             cbCreateAsThreshold.setChecked(arguments.getBoolean(Query.INTENT_CREATE_AS_THRESHOLD, true));
+//            rbTaskGroup2Due.setChecked(arguments.getString(Query.INTENT_TASKGROUP2_KEY, "限期") == "限期");
+//            rbTaskGroup2None.setChecked(arguments.getString(Query.INTENT_TASKGROUP2_KEY, "限期") == "优先级");
+//            rbTaskGroup2Prio.setChecked(arguments.getString(Query.INTENT_TASKGROUP2_KEY, "限期") == "无");
         }
 
         return layout;
@@ -148,4 +174,15 @@ public class FilterOtherFragment extends Fragment {
             return cbCreateAsThreshold.isChecked();
         }
     }
+
+    public String getTaskGroup2By() {
+        Bundle arguments = getArguments();
+        if (rbTaskGroup2 == null) {
+            return arguments.getString(Query.INTENT_TASKGROUP2_KEY, "限期");
+        } else {
+            return rbTaskGroup2.getText().toString();
+        }
+    }
+
+
 }

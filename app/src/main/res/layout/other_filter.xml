@@ -10,7 +10,48 @@
     android:paddingRight="16dp"
     android:orientation="vertical"
     >
-    <CheckBox 
+
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/group2_content_select_title" />
+
+    <RadioGroup
+        android:id="@+id/rg_task_g2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <RadioButton
+            android:id="@+id/rg_task_g2_due"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="限期" />
+
+        <RadioButton
+            android:id="@+id/rg_task_g2_prio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="优先级" />
+
+        <RadioButton
+            android:id="@+id/rg_task_g2_none"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="无" />
+    </RadioGroup>
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="任务文本和列表：" />
+
+    <CheckBox
         android:id="@+id/cb_show_completed"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -52,4 +93,5 @@
         android:layout_height="wrap_content"
         android:text="@string/use_create_as_threshold_title"
         />
+
 </LinearLayout>

@@ -149,6 +149,7 @@ You should have received a copy of the GNU General Public License along with Tod
     <string name="resume_sync_pref_summary">Sync with Dropbox when opening app.</string>
     <string name="font_size_delta_pref_title">Custom font size</string>
     <string name="datebar_relative_size_summary">Relative date line size</string>
+    <string name="header_relative_size_summary">Relative header size</string>
     <string name="font_size_delta_pref_summary">Change font size.</string>
     <string name="theme_pref_title">Theme</string>
     <string name="theme_pref_summary">Change app theme.</string>
@@ -259,6 +260,9 @@ You should have received a copy of the GNU General Public License along with Tod
 
     <string name="use_create_as_threshold_title">Create is threshold</string>
     <string name="use_create_backup_summary">When sorting, use the task creation date as threshold date if no threshold date is set</string>
+
+    <string name="group2_content_select_title">Group 2nd by</string>
+    <string name="group2_content_select_summary">you can select group 2nd by priority/due/blank</string>
 
     <string name="todotxt_terms_title">Use todo.txt terms</string>
     <string name="todotxt_terms_summary">Context and project instead of list and tag</string>
@@ -485,5 +489,8 @@ You should have received a copy of the GNU General Public License along with Tod
     <string name="no_tasks_to_archive">No tasks to archive.</string>
 
     <string name="force_english_title">Force English</string>
+    <string name="defer_review">Set review date</string>
+    <string name="date_origin">Date Origin</string>
+   <string name="set_date_origin">Set Date Origin</string>
 
 </resources>

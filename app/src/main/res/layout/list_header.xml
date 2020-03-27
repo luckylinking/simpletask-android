@@ -6,9 +6,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingTop="4dip"
-    android:paddingBottom="0dip"
+    android:paddingBottom="4dip"
     android:paddingLeft="6dip"
     style="?android:attr/listSeparatorTextViewStyle"
-    android:gravity="left"
-    android:paddingRight="20dip"
+    android:gravity="start"
+    android:paddingRight="6dip"
     />
