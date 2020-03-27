@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import com.owncloud.android.lib.common.OwnCloudClient
 import com.owncloud.android.lib.common.OwnCloudClientFactory
+import com.owncloud.android.lib.common.OwnCloudClientManagerFactory
 import com.owncloud.android.lib.common.OwnCloudCredentialsFactory
 import com.owncloud.android.lib.common.operations.RemoteOperationResult
 import com.owncloud.android.lib.resources.files.DownloadFileRemoteOperation
@@ -33,14 +34,14 @@ object FileStore : IFileStore {
     internal val NEXTCLOUD_PASS = "ncPass"
     internal val NEXTCLOUD_URL = "ncURL"
 
-    var username by Config.StringOrNullPreference(NEXTCLOUD_USER)
-    var password by Config.StringOrNullPreference(NEXTCLOUD_PASS)
-    var serverUrl by Config.StringOrNullPreference(NEXTCLOUD_URL)
-    var mNextcloud : OwnCloudClient? = getClient()
+    var username by TodoApplication.config.StringOrNullPreference(NEXTCLOUD_USER)
+    var password by TodoApplication.config.StringOrNullPreference(NEXTCLOUD_PASS)
+    var serverUrl by TodoApplication.config.StringOrNullPreference(NEXTCLOUD_URL)
 
     override val isAuthenticated: Boolean
         get() {
-            return username != null && mNextcloud != null
+            Log.d("FileStore", "FileStore is authenticated ${username != null}")
+            return username != null
         }
 
     override fun logout() {
@@ -58,7 +59,8 @@ object FileStore : IFileStore {
     private fun getClient () : OwnCloudClient? {
         serverUrl?.let { url ->
             val ctx = TodoApplication.app.applicationContext
-            val client = OwnCloudClientFactory.createOwnCloudClient(Uri.parse(url), ctx, true, true)
+            OwnCloudClientManagerFactory.setUserAgent("Mozilla/5.0 (Android) Nextcloud-android/3.8.1")
+            val client = OwnCloudClientFactory.createOwnCloudClient(Uri.parse(url), ctx, true)
             client.credentials = OwnCloudCredentialsFactory.newBasicCredentials(
                     username,
                     password
@@ -68,14 +70,12 @@ object FileStore : IFileStore {
         return null
     }
 
-    fun resetClient() {
-        mNextcloud = getClient()
-    }
 
     override fun getRemoteVersion(filename: String): String {
         val op = ReadFileRemoteOperation(filename)
-        val res = op.execute(mNextcloud)
+        val res = op.execute(getClient())
         val file = res.data[0] as RemoteFile
+        Log.d(TAG, "Remote versions of $filename: id: ${file.remoteId} tag: ${file.etag} modified: ${file.modifiedTimestamp} ")
         return file.etag
     }
 
@@ -83,7 +83,9 @@ object FileStore : IFileStore {
         get() {
             val cm = mApp.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             val netInfo = cm.activeNetworkInfo
-            return netInfo != null && netInfo.isConnected
+            val online =  netInfo != null && netInfo.isConnected
+            Log.d("FileStore","Filestore online: $online")
+            return online
         }
 
     override fun loadTasksFromFile(path: String): RemoteContents {
@@ -99,9 +101,10 @@ object FileStore : IFileStore {
 
         val cacheDir = mApp.applicationContext.cacheDir
         val op = DownloadFileRemoteOperation(path, cacheDir.canonicalPath)
-        op.execute(mNextcloud)
+        val client = getClient()
+        op.execute(client)
         val infoOp = ReadFileRemoteOperation(path)
-        val res = infoOp.execute(mNextcloud)
+        val res = infoOp.execute(client)
         if (res.httpCode == 404) {
             throw (IOException("File not found"))
         }
@@ -119,7 +122,7 @@ object FileStore : IFileStore {
 
     @Synchronized
     @Throws(IOException::class)
-    override fun saveTasksToFile(path: String, lines: List<String>, eol: String) {
+    override fun saveTasksToFile(path: String, lines: List<String>, lastRemote: String?, eol: String) : String {
         val contents = join(lines, eol) + eol
 
         val timestamp = timeStamp()
@@ -128,11 +131,11 @@ object FileStore : IFileStore {
         val cacheDir = mApp.applicationContext.cacheDir
         val tmpFile = File(cacheDir, "tmp.txt")
         tmpFile.writeText(contents)
-
+        val client = getClient()
         // if we have previously seen a file from the server, we don't upload unless it's the
         // one we've seen before. If we've never seen a file, we just upload unconditionally
         val res = UploadFileRemoteOperation(tmpFile.absolutePath, path,
-                "text/plain", timestamp).execute(mNextcloud)
+                "text/plain", timestamp).execute(client)
 
         val conflict = 412
         if (res.httpCode == conflict) {
@@ -143,16 +146,17 @@ object FileStore : IFileStore {
             val newName = nameWithoutTxt + "_conflict_" + UUID.randomUUID() + ".txt"
             val newPath = parent + "/" + newName
             UploadFileRemoteOperation(tmpFile.absolutePath, newPath,
-                    "text/plain", timestamp).execute(mNextcloud)
+                    "text/plain", timestamp).execute(client)
 
             showToastLong(TodoApplication.app, "CONFLICT! Uploaded as " + newName
                     + ". Review differences manually with a text editor.")
         }
 
         val infoOp = ReadFileRemoteOperation(path)
-        val infoRes = infoOp.execute(mNextcloud)
+        val infoRes = infoOp.execute(client)
         val fileInfo = infoRes.data[0] as RemoteFile
-        Config.lastSeenRemoteId = fileInfo.etag
+        Log.i(TAG,"New remote version tag: ${fileInfo.etag}, id: ${fileInfo.remoteId}, modified: ${fileInfo.modifiedTimestamp}")
+        return fileInfo.etag
 
     }
 
@@ -162,9 +166,9 @@ object FileStore : IFileStore {
             throw IOException("Device is offline")
         }
         val cacheDir = mApp.applicationContext.cacheDir
-
+        val client = getClient()
         val op = DownloadFileRemoteOperation(path, cacheDir.canonicalPath)
-        val result = op.execute(mNextcloud)
+        val result = op.execute(client)
         val doneContents = if (result.isSuccess) {
             val cachePath = File(cacheDir, path).canonicalPath
             File(cachePath).readLines().toMutableList()
@@ -179,23 +183,23 @@ object FileStore : IFileStore {
         tmpFile.writeText(contents)
         val timestamp = timeStamp()
         val writeOp = UploadFileRemoteOperation(tmpFile.absolutePath, path, "text/plain", timestamp)
-        writeOp.execute(mNextcloud)
+        writeOp.execute(client)
 
 
     }
 
-    override fun writeFile(file: File, contents: String) {
+    override fun writeFile(path: String, contents: String) {
         if (!isAuthenticated) {
-            Log.e(TAG, "Not authenticated, file ${file.canonicalPath} not written.")
+            Log.e(TAG, "Not authenticated, file $path not written.")
             throw IOException("Not authenticated")
         }
 
         val cacheDir = mApp.applicationContext.cacheDir
         val tmpFile = File(cacheDir, "tmp.txt")
         tmpFile.writeText(contents)
-        val op = UploadFileRemoteOperation(tmpFile.absolutePath, file.canonicalPath, "text/plain", timeStamp())
-        val result = op.execute(mNextcloud)
-        Log.i(TAG, "Wrote file to ${file.path}, result ${result.isSuccess}")
+        val op = UploadFileRemoteOperation(tmpFile.absolutePath, path, "text/plain", timeStamp())
+        val result = op.execute(getClient())
+        Log.i(TAG, "Wrote file to $path, result ${result.isSuccess}")
 
     }
 
@@ -208,7 +212,7 @@ object FileStore : IFileStore {
         }
         val cacheDir = mApp.applicationContext.cacheDir
         val op = DownloadFileRemoteOperation(file, cacheDir.canonicalPath)
-        op.execute(mNextcloud)
+        op.execute(getClient())
         val cachePath = File(cacheDir, file).canonicalPath
         val contents = File(cachePath).readText()
         fileRead(contents)
@@ -218,7 +222,7 @@ object FileStore : IFileStore {
     override fun loadFileList(path: String, txtOnly: Boolean): List<FileEntry> {
         val result = ArrayList<FileEntry>()
         val op = ReadFolderRemoteOperation(File(path).canonicalPath)
-        val res: RemoteOperationResult = op.execute(mNextcloud)
+        val res: RemoteOperationResult = op.execute(getClient())
         // Loop over the resulting files
         // Drop the first one as it is the current folder
         res.data.drop(1).forEach { file ->

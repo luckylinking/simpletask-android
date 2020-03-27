@@ -24,40 +24,24 @@ You should have received a copy of the GNU General Public License along with Sim
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" >
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS"/>
-    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
-    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS"/>
 
     <application>
         <activity
-            android:name="nl.mpcjanssen.simpletask.remote.LoginScreen"
-            android:label="@string/app_label" >
+                android:name="nl.mpcjanssen.simpletask.remote.LoginScreen"
+                android:label="@string/app_label" >
         </activity>
         <receiver android:name="nl.mpcjanssen.simpletask.remote.ConnectivityReceiver">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
             </intent-filter>
         </receiver>
-        <provider 
-            android:exported="true"
-            android:name="nl.mpcjanssen.simpletask.CachedFileProvider"
-            android:authorities="${applicationId}.provider.${providerFlavour}" tools:ignore="ExportedContentProvider">
+        <provider
+                android:exported="true"
+                android:name="nl.mpcjanssen.simpletask.CachedFileProvider"
+                android:authorities="${applicationId}.provider.${providerFlavour}" tools:ignore="ExportedContentProvider">
             <grant-uri-permission android:pathPattern=".*" />
         </provider>
 
-        <service
-            android:name="nl.mpcjanssen.simpletask.remote.SimpleTaskNextcloudAuthenticatorService">
-            <intent-filter>
-                <action android:name="android.accounts.AccountAuthenticator"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator" />
-        </service>
-
-
-
     </application>
-
 
 </manifest>

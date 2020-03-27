@@ -21,9 +21,9 @@ object Interpreter :  AbstractInterpreter() {
         globals.set("log", LuaLog())
         evalScript(null, TODOLIB)
         try {
-            evalScript(null, Config.luaConfig)
+            evalScript(null, TodoApplication.config.luaConfig)
         } catch (e: LuaError) {
-            Log.w(Config.TAG, "Lua execution failed " + e.message)
+            Log.w(TodoApplication.config.TAG, "Lua execution failed " + e.message)
             showToastLong(TodoApplication.app, "${getString(R.string.lua_error)}:  ${e.message}")
         }
 
@@ -209,7 +209,7 @@ object Interpreter :  AbstractInterpreter() {
     // Fill the arguments for the onFilter callback
     private fun fillOnFilterVarargs(t: Task): Varargs {
         val args = ArrayList<LuaValue>()
-        args.add(LuaValue.valueOf(t.inFileFormat()))
+        args.add(LuaValue.valueOf(t.inFileFormat(TodoApplication.config.useUUIDs)))
         val fieldTable = LuaTable.tableOf()
         fieldTable.set("due", dateStringToLuaLong(t.dueDate))
         fieldTable.set("threshold", dateStringToLuaLong(t.thresholdDate))

@@ -98,7 +98,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         }
 
         t.text = ss
-        t.textSize = textSize * Config.headerRelativeSize
+        t.textSize = textSize * TodoApplication.config.headerRelativeSize
     }
 
     private fun bindTask (holder : TaskViewHolder, position: Int) {
@@ -121,13 +121,13 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
             else -> true
         }
 
-        if (Config.showCompleteCheckbox) {
+        if (TodoApplication.config.showCompleteCheckbox) {
             view.checkBox.visibility = View.VISIBLE
         } else {
             view.checkBox.visibility = View.GONE
         }
 
-        if (!Config.hasExtendedTaskView) {
+        if (!TodoApplication.config.hasExtendedTaskView) {
             view.datebar1.visibility = View.GONE
             view.datebar2.visibility = View.GONE
             view.datebar3.visibility = View.GONE
@@ -137,9 +137,9 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
                 is UUIDToken -> false
                 is CreateDateToken -> false
                 is CompletedToken -> false
-                is CompletedDateToken -> !Config.hasExtendedTaskView
-                is DueDateToken -> !Config.hasExtendedTaskView
-                is ThresholdDateToken -> !Config.hasExtendedTaskView
+                is CompletedDateToken -> !TodoApplication.config.hasExtendedTaskView
+                is DueDateToken -> !TodoApplication.config.hasExtendedTaskView
+                is ThresholdDateToken -> !TodoApplication.config.hasExtendedTaskView
                 is ListToken -> !query.hideLists || showTimeAndLists
                 is TagToken -> !query.hideTags
                 is ReviewDateToken -> false
@@ -158,7 +158,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
 //        val txt2 = textSize.toString()
 //        val txt ="$txt1$txt2"
         val ss = SpannableString(txt)
-        if (Config.isDarkTheme || Config.isBlackTheme) {
+        if (TodoApplication.config.isDarkTheme || TodoApplication.config.isBlackTheme) {
             setColor(ss, Color.WHITE)
         } else {
             setColor(ss, Color.BLACK)
@@ -181,15 +181,15 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         setColor(ss, priorityColor, priority.fileFormat)
         val completed = task.isCompleted()
 
-        taskAge.textSize = textSize * Config.dateBarRelativeSize
-        taskDue.textSize = textSize * Config.dateBarRelativeSize
-        taskReview.textSize = textSize * Config.dateBarRelativeSize
-        taskThreshold.textSize = textSize * Config.dateBarRelativeSize
-        taskDefer.textSize = textSize * Config.dateBarRelativeSize
-        taskBegin.textSize = textSize * Config.dateBarRelativeSize
-        taskEnd.textSize = textSize * Config.dateBarRelativeSize
-        taskTimeDefer.textSize = textSize * Config.dateBarRelativeSize
-        taskRec.textSize = textSize * Config.dateBarRelativeSize
+        taskAge.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskDue.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskReview.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskThreshold.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskDefer.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskBegin.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskEnd.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskTimeDefer.textSize = textSize * TodoApplication.config.dateBarRelativeSize
+        taskRec.textSize = textSize * TodoApplication.config.dateBarRelativeSize
 
         val cb = view.checkBox
 
@@ -306,7 +306,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
 
         // Set selected state
         // Log.d(tag, "Setting selected state ${TodoList.isSelected(item)}")
-        view.isActivated = TodoList.isSelected(task)
+        view.isActivated = TodoApplication.todoList.isSelected(task)
 
         // Set click listeners
         view.setOnClickListener { onClickAction (task) ; it.isActivated = !it.isActivated }
@@ -316,15 +316,15 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
     internal var visibleLines = ArrayList<VisibleLine>()
 
     internal fun setFilteredTasks(caller: Simpletask, newQuery: Query) {
-        textSize = Config.tasklistTextSize ?: textSize
+        textSize = TodoApplication.config.tasklistTextSize ?: textSize
         Log.i(tag, "Text size = $textSize")
         query = newQuery
 
         caller.runOnUiThread {
             caller.showListViewProgress(true)
         }
-        Log.i(tag, "setFilteredTasks called: $TodoList")
-        val (visibleTasks, total) = TodoList.getSortedTasks(newQuery, Config.sortCaseSensitive)
+        Log.i(tag, "setFilteredTasks called: ${TodoApplication.todoList}")
+        val (visibleTasks, total) = TodoApplication.todoList.getSortedTasks(newQuery, TodoApplication.config.sortCaseSensitive)
         countTotalTasks = total
         countVisibleTasks = visibleTasks.size
 
@@ -335,16 +335,15 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         caller.runOnUiThread {
             // Replace the array in the main thread to prevent OutOfIndex exceptions
             visibleLines = newVisibleLines
-            notifyDataSetChanged()
             caller.showListViewProgress(false)
-            if (Config.lastScrollPosition != -1) {
+            if (TodoApplication.config.lastScrollPosition != -1) {
                 val manager = caller.listView?.layoutManager as LinearLayoutManager?
-                val position = Config.lastScrollPosition
-                val offset = Config.lastScrollOffset
+                val position = TodoApplication.config.lastScrollPosition
+                val offset = TodoApplication.config.lastScrollOffset
                 Log.i(tag, "Restoring scroll offset $position, $offset")
                 manager?.scrollToPositionWithOffset(position, offset)
-                Config.lastScrollPosition = -1
             }
+            notifyDataSetChanged()
         }
     }
 
@@ -379,7 +378,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
     private fun handleEllipsis(taskText: TextView) {
         val noEllipsizeValue = "no_ellipsize"
         val ellipsizeKey = TodoApplication.app.getString(R.string.task_text_ellipsizing_pref_key)
-        val ellipsizePref = Config.prefs.getString(ellipsizeKey, noEllipsizeValue)
+        val ellipsizePref = TodoApplication.config.prefs.getString(ellipsizeKey, noEllipsizeValue)
 
         if (noEllipsizeValue != ellipsizePref) {
             taskText.ellipsize = when (ellipsizePref) {

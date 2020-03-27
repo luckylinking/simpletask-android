@@ -2,12 +2,15 @@ package nl.mpcjanssen.simpletask.task
 
 import android.app.Activity
 import android.content.Intent
+import android.os.CountDownTimer
 import android.os.SystemClock
 import android.util.Log
 import nl.mpcjanssen.simpletask.*
 import nl.mpcjanssen.simpletask.remote.FileStore
+
 import nl.mpcjanssen.simpletask.remote.IFileStore
 import nl.mpcjanssen.simpletask.util.*
+
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -18,19 +21,19 @@ import kotlin.collections.ArrayList
 
  * @author Mark Janssen
  */
-object TodoList {
-
+class TodoList(val config: Config) {
+    private var timer: CountDownTimer? = null
     private var mLists: MutableList<String>? = null
     private var mTags: MutableList<String>? = null
     private val todoItems = ArrayList<Task>()
-    val pendingEdits = ArrayList<Task>()
+    val pendingEdits = HashSet<Task>()
     internal val TAG = TodoList::class.java.simpleName
 
     init {
-        Config.todoList?.let { todoItems.addAll(it) }
+        config.todoList?.let { todoItems.addAll(it) }
     }
 
-    @Synchronized
+
     fun add(items: List<Task>, atEnd: Boolean) {
         Log.d(TAG, "Add task ${items.size} atEnd: $atEnd")
         val updatedItems = items.map { item ->
@@ -48,7 +51,7 @@ object TodoList {
         add(listOf(t), atEnd)
     }
 
-    @Synchronized
+
     fun removeAll(tasks: List<Task>) {
         Log.d(TAG, "Remove")
         pendingEdits.removeAll(tasks)
@@ -56,13 +59,13 @@ object TodoList {
 
     }
 
-    @Synchronized
+
     fun size(): Int {
         return todoItems.size
     }
 
     val priorities: ArrayList<Priority>
-        @Synchronized
+
         get() {
             val res = HashSet<Priority>()
             todoItems.forEach {
@@ -74,7 +77,7 @@ object TodoList {
         }
 
     val contexts: List<String>
-        @Synchronized
+
         get() {
             val lists = mLists
             if (lists != null) {
@@ -91,7 +94,7 @@ object TodoList {
         }
 
     val projects: List<String>
-        @Synchronized
+
         get() {
             val tags = mTags
             if (tags != null) {
@@ -107,7 +110,7 @@ object TodoList {
             return newTags
         }
 
-    @Synchronized
+
     fun uncomplete(items: List<Task>) {
         Log.d(TAG, "Uncomplete")
         items.forEach {
@@ -115,7 +118,7 @@ object TodoList {
         }
     }
 
-    @Synchronized
+
     fun complete(tasks: List<Task>, keepPrio: Boolean, extraAtEnd: Boolean) {
         Log.d(TAG, "Complete")
         for (task in tasks) {
@@ -134,13 +137,13 @@ object TodoList {
 
     }
 
-    @Synchronized
+
     fun prioritize(tasks: List<Task>, prio: Priority) {
         Log.d(TAG, "Complete")
         tasks.map { it.priority = prio }
     }
 
-    @Synchronized
+
     fun defer(deferString: String, tasks: List<Task>, dateType: DateType) {
         Log.d(TAG, "Defer")
         tasks.forEach {
@@ -152,8 +155,8 @@ object TodoList {
         }
     }
 
-    @Synchronized
-    fun update(org: List<Task>, updated: List<Task>, addAtEnd: Boolean) {
+
+    fun update(org: Collection<Task>, updated: List<Task>, addAtEnd: Boolean) {
         val smallestSize = org.zip(updated) { orgTask, updatedTask ->
             val idx = todoItems.indexOf(orgTask)
             if (idx != -1) {
@@ -168,22 +171,24 @@ object TodoList {
     }
 
     val selectedTasks: List<Task>
-        @Synchronized
+
         get() {
             return todoItems.toList().filter { it.selected }
         }
 
-    val fileFormat : String =  todoItems.toList().joinToString(separator = "\n", transform = Task::inFileFormat)
+    val fileFormat : String =  todoItems.toList().joinToString(separator = "\n", transform = {
+        it.inFileFormat(config.useUUIDs)
+    })
 
 
 
-    @Synchronized
+
     fun notifyTasklistChanged(todoName: String, save: Boolean, refreshMainUI: Boolean = true) {
         Log.d(TAG, "Notified changed")
         if (save) {
-            save(FileStore, todoName, true, Config.eol)
+            save(FileStore, todoName, true, config.eol)
         }
-        if (!Config.hasKeepSelection) {
+        if (!config.hasKeepSelection) {
             clearSelection()
         }
         mLists = null
@@ -195,7 +200,7 @@ object TodoList {
         }
     }
 
-    @Synchronized
+
     private fun startAddTaskActivity(act: Activity, prefill: String) {
         Log.d(TAG, "Start add/edit task activity")
         val intent = Intent(act, AddTask::class.java)
@@ -203,9 +208,9 @@ object TodoList {
         act.startActivity(intent)
     }
 
-    @Synchronized
+
     fun getSortedTasks(filter: Query, caseSensitive: Boolean): Pair<List<Task>, Int> {
-        val sorts = filter.getSort(Config.defaultSorts)
+        val sorts = filter.getSort(config.defaultSorts)
         Log.d(TAG, "Getting sorted and filtered tasks")
         val start = SystemClock.elapsedRealtime()
         val comp = MultiComparator(sorts, TodoApplication.app.today, caseSensitive, filter.createIsThreshold, filter.luaModule, filter.taskGroup2By)
@@ -224,105 +229,128 @@ object TodoList {
 
     }
 
-    @Synchronized
+
     fun reload(reason: String = "") {
-        Log.d(TAG, "Reload: $reason")
-        broadcastFileSyncStart(TodoApplication.app.localBroadCastManager)
-        if (!FileStore.isAuthenticated) {
-            broadcastFileSyncDone(TodoApplication.app.localBroadCastManager)
-            return
-        }
-        val filename = Config.todoFileName
-        if (Config.changesPending && FileStore.isOnline) {
-            Log.i(TAG, "Not loading, changes pending")
-            Log.i(TAG, "Saving instead of loading")
-            save(FileStore, filename, true, Config.eol)
-        } else {
-            FileStoreActionQueue.add("Reload") {
-                val needSync = try {
-                    val newerVersion = FileStore.getRemoteVersion(Config.todoFileName)
-                    newerVersion != Config.lastSeenRemoteId
-                } catch (e: Throwable) {
-                    Log.e(TAG, "Can't determine remote file version", e)
-                    false
-                }
-                if (needSync) {
-                    Log.i(TAG, "Remote version is different, sync")
+        FileStoreActionQueue.add("Reload") {
+            Log.d(TAG, "Reload: $reason")
+            if (FileStore.isAuthenticated) {
+                val filename = config.todoFileName
+                if (config.changesPending && FileStore.isOnline) {
+                    Log.i(TAG, "Not loading, changes pending")
+                    Log.i(TAG, "Saving instead of loading")
+                    save(FileStore, filename, true, config.eol)
                 } else {
-                    Log.i(TAG, "Remote version is same, load from cache")
+                    reloadaction(filename)
                 }
-                val cachedList = Config.todoList
-                if (cachedList == null || needSync) {
-                    try {
-                        val remoteContents = FileStore.loadTasksFromFile(filename)
-                        val items = ArrayList<Task>(
-                                remoteContents.contents.map { text ->
-                                    Task(text)
-                                })
-
-                        Log.d(TAG, "Fill todolist")
-                        todoItems.clear()
-                        todoItems.addAll(items)
-                        // Update cache
-                        Config.cachedContents = remoteContents.contents.joinToString("\n")
-                        Config.lastSeenRemoteId = remoteContents.remoteId
-                        // Backup
-                        Backupper.backup(filename, items.map { it.inFileFormat() })
-                        notifyTasklistChanged(filename, false, true)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "TodoList load failed: {}" + filename, e)
-                        showToastShort(TodoApplication.app, "Loading of todo file failed")
-                    }
-
-                    Log.i(TAG, "TodoList loaded from dropbox")
-                }
+            } else {
+                Log.d(TAG, "Not authenticatd")
             }
-            broadcastFileSyncDone(TodoApplication.app.localBroadCastManager)
         }
     }
 
-    @Synchronized
-    private fun save(fileStore: IFileStore, todoFileName: String, backup: Boolean, eol: String) {
+
+    private fun reloadaction(filename: String) {
+        Log.d(TAG, "Executing reloadaction")
         broadcastFileSyncStart(TodoApplication.app.localBroadCastManager)
+        val needSync = try {
+            val newerVersion = FileStore.getRemoteVersion(config.todoFileName)
+            Log.i(TAG, "Remote version: $newerVersion (current local ${config.lastSeenRemoteId})")
+            newerVersion != config.lastSeenRemoteId
+        } catch (e: Throwable) {
+            Log.e(TAG, "Can't determine remote file version", e)
+            false
+        }
+        if (needSync) {
+            Log.i(TAG, "Remote version is different, sync")
+            try {
+                val remoteContents = FileStore.loadTasksFromFile(filename)
+                val items = remoteContents.contents
+
+                Log.d(TAG, "Fill todolist with ${items.size} items")
+                todoItems.clear()
+                todoItems.addAll(items.map { Task(it) })
+                // Update cache
+                Log.i(TAG, "Updating cache with remote version ${remoteContents.remoteId}")
+                config.todoList = todoItems
+                config.lastSeenRemoteId = remoteContents.remoteId
+                // Backup
+                FileStoreActionQueue.add("Backup") {
+                    Backupper.backup(filename, items)
+                }
+                notifyTasklistChanged(filename, false, true)
+            } catch (e: Exception) {
+                Log.e(TAG, "TodoList load failed: $filename", e)
+                showToastShort(TodoApplication.app, "Loading of todo file failed")
+            }
+
+            Log.i(TAG, "TodoList loaded from filestore")
+        } else {
+            Log.i(TAG, "Remote version is same, load from cache")
+        }
+        broadcastFileSyncDone(TodoApplication.app.localBroadCastManager)
+    }
+
+
+    private fun save(fileStore: IFileStore, todoFileName: String, backup: Boolean, eol: String) {
+        Log.d(TAG, "Save: $todoFileName")
+        config.changesPending = true
+        broadcastUpdateStateIndicator(TodoApplication.app.localBroadCastManager)
+        config.todoList = todoItems
         val lines = todoItems.map {
-            it.inFileFormat()
+            it.inFileFormat(config.useUUIDs)
         }
         // Update cache
-        Config.cachedContents = lines.joinToString("\n")
-
-        FileStoreActionQueue.add("Save") {
+        FileStoreActionQueue.add("Backup") {
             if (backup) {
                 Backupper.backup(todoFileName, lines)
             }
-            try {
-                Log.i(TAG, "Saving todo list, size ${lines.size}")
-                fileStore.saveTasksToFile(todoFileName, lines, eol = eol)
-                val changesWerePending = Config.changesPending
-                Config.changesPending = false
-                if (changesWerePending) {
-                    // Remove the red bar
-                    broadcastUpdateStateIndicator(TodoApplication.app.localBroadCastManager)
+        }
+        runOnMainThread(Runnable {
+            timer?.apply { cancel() }
+
+            timer = object: CountDownTimer(TodoApplication.config.idleBeforeSaveSeconds*1000L, 1000) {
+                override fun onFinish() {
+                    Log.d(TAG, "Executing pending Save")
+                    FileStoreActionQueue.add("Save") {
+                        broadcastFileSyncStart(TodoApplication.app.localBroadCastManager)
+                        try {
+                            Log.i(TAG, "Saving todo list, size ${lines.size}")
+                            config.lastSeenRemoteId  = fileStore.saveTasksToFile(todoFileName, lines, eol = eol, lastRemote = config.lastSeenRemoteId)
+                            Log.i(TAG, "Remote version is ${config.lastSeenRemoteId}")
+
+                            if (config.changesPending) {
+                                // Remove the red bar
+                                config.changesPending = false
+                                broadcastUpdateStateIndicator(TodoApplication.app.localBroadCastManager)
+                            }
+
+                        } catch (e: Exception) {
+                            Log.e(TAG, "TodoList save to $todoFileName failed", e)
+                            config.changesPending = true
+                            if (fileStore.isOnline) {
+                                showToastShort(TodoApplication.app, "Saving of todo file failed")
+                            }
+                        }
+                        broadcastFileSyncDone(TodoApplication.app.localBroadCastManager)
+                    }
+
                 }
 
-            } catch (e: Exception) {
-                Log.e(TAG, "TodoList save to $todoFileName failed", e)
-                Config.changesPending = true
-                if (FileStore.isOnline) {
-                    showToastShort(TodoApplication.app, "Saving of todo file failed")
+                override fun onTick(p0: Long) {
+                    Log.d(TAG, "Scheduled save in ${p0}")
                 }
-            }
-            broadcastFileSyncDone(TodoApplication.app.localBroadCastManager)
-        }
+            }.start()
+        })
     }
 
-    @Synchronized
+
     fun archive(todoFilename: String, doneFileName: String, tasks: List<Task>, eol: String) {
         Log.d(TAG, "Archive ${tasks.size} tasks")
 
         FileStoreActionQueue.add("Append to file") {
             broadcastFileSyncStart(TodoApplication.app.localBroadCastManager)
             try {
-                FileStore.appendTaskToFile(doneFileName, tasks.map { it.text }, eol)
+                FileStore.appendTaskToFile(doneFileName, tasks.map {it.inFileFormat(useUUIDs = TodoApplication.config.useUUIDs)}, eol)
                 removeAll(tasks)
                 notifyTasklistChanged(todoFilename, true, true)
             } catch (e: Exception) {
@@ -335,29 +363,29 @@ object TodoList {
 
     fun isSelected(item: Task): Boolean = item.selected
 
-    @Synchronized
+
     fun numSelected(): Int {
         return todoItems.toList().count { it.selected }
     }
 
-    @Synchronized
+
     fun selectTasks(items: List<Task>) {
         Log.d(TAG, "Select")
         items.forEach { selectTask(it) }
         broadcastRefreshSelection(TodoApplication.app.localBroadCastManager)
     }
 
-    @Synchronized
+
     private fun selectTask(item: Task?) {
         item?.selected = true
     }
 
-    @Synchronized
+
     private fun unSelectTask(item: Task) {
         item.selected = false
     }
 
-    @Synchronized
+
     fun unSelectTasks(items: List<Task>) {
         Log.d(TAG, "Unselect")
         items.forEach { unSelectTask(it) }
@@ -365,7 +393,7 @@ object TodoList {
 
     }
 
-    @Synchronized
+
     fun clearSelection() {
         Log.d(TAG, "Clear selection")
         todoItems.iterator().forEach { it.selected = false }
@@ -373,32 +401,31 @@ object TodoList {
 
     }
 
-    @Synchronized
+
     fun getTaskIndex(t: Task): Int {
         return todoItems.indexOf(t)
     }
 
-    @Synchronized
+
     fun getTaskAt(idx: Int): Task? {
         return todoItems.getOrNull(idx)
     }
 
-    @Synchronized
+
     fun each (callback : (Task) -> Unit) {
         todoItems.forEach { callback.invoke(it) }
     }
 
-    @Synchronized
+
     fun editTasks(from: Activity, tasks: List<Task>, prefill: String) {
         Log.d(TAG, "Edit tasks")
         pendingEdits.addAll(tasks)
         startAddTaskActivity(from, prefill)
     }
 
-    @Synchronized
+
     fun clearPendingEdits() {
         Log.d(TAG, "Clear selection")
         pendingEdits.clear()
     }
 }
-

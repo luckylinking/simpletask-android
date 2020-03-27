@@ -36,6 +36,7 @@ import android.view.inputmethod.InputMethodManager
 import android.webkit.MimeTypeMap
 import android.widget.*
 import android.widget.AdapterView.OnItemLongClickListener
+import androidx.core.widget.NestedScrollView
 import hirondelle.date4j.DateTime
 import kotlinx.android.synthetic.main.main.*
 import nl.mpcjanssen.simpletask.adapters.DrawerAdapter
@@ -48,8 +49,6 @@ import kotlin.collections.ArrayList
 import android.R.id as androidId
 
 class Simpletask : ThemedNoActionBarActivity() {
-
-
     companion object {
         private val REQUEST_PREFERENCES = 1
 
@@ -70,7 +69,6 @@ class Simpletask : ThemedNoActionBarActivity() {
 
     private var m_drawerToggle: ActionBarDrawerToggle? = null
     private var m_savedInstanceState: Bundle? = null
-    private var m_scrollPosition = 0
 
     private val uiHandler = UiHandler()
 
@@ -95,20 +93,20 @@ class Simpletask : ThemedNoActionBarActivity() {
                     completeTasks(it)
                     // Update the tri state checkbox
                     handleMode(mapOf(Mode.SELECTION to { invalidateOptionsMenu() }))
-                    TodoList.notifyTasklistChanged(Config.todoFileName, false,true)
+                    TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, false,true)
                 },
                 unCompleteAction = {
                     uncompleteTasks(it)
                     // Update the tri state checkbox
                     handleMode(mapOf(Mode.SELECTION to { invalidateOptionsMenu() }))
-                    TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                    TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
                 },
                 onClickAction = {
-                    val newSelectedState = !TodoList.isSelected(it)
+                    val newSelectedState = !TodoApplication.todoList.isSelected(it)
                     if (newSelectedState) {
-                        TodoList.selectTasks(listOf(it))
+                        TodoApplication.todoList.selectTasks(listOf(it))
                     } else {
-                        TodoList.unSelectTasks(listOf(it))
+                        TodoApplication.todoList.unSelectTasks(listOf(it))
                     }
                     invalidateOptionsMenu()
                 },
@@ -146,32 +144,15 @@ class Simpletask : ThemedNoActionBarActivity() {
                         build.setItems(titleArray) { _, which ->
                             val actionIntent: Intent
                             val url = links[which]
-                            Log.i(Simpletask.TAG, "" + actions[which] + ": " + url)
+                            Log.i(TAG, "" + actions[which] + ": " + url)
                             when (actions[which]) {
-                                Action.LINK -> when {
-                                    url.startsWith("todo://") -> {
-                                        val todoFolder = Config.todoFile.parentFile
-                                        val newName = File(todoFolder, url.substring(7))
-                                        TodoApplication.app.switchTodoFile(newName.absolutePath)
-                                    }
-                                    url.startsWith("root://") -> {
-                                        val rootFolder = Config.localFileRoot
-                                        val file = File(rootFolder, url.substring(7))
-                                        actionIntent = Intent(Intent.ACTION_VIEW)
-                                        val contentUri = Uri.fromFile(file)
-                                        val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension)
-                                        actionIntent.setDataAndType(contentUri, mime)
-                                        actionIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        startActivity(actionIntent)
-                                    }
-                                    else -> try {
+                                Action.LINK -> try {
                                         actionIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                                         startActivity(actionIntent)
                                     } catch (e: ActivityNotFoundException) {
-                                        Log.i(Simpletask.TAG, "No handler for task action $url")
+                                        Log.i(TAG, "No handler for task action $url")
                                         showToastLong(TodoApplication.app, "No handler for $url")
                                     }
-                                }
                                 Action.PHONE -> {
                                     actionIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(url)))
                                     startActivity(actionIntent)
@@ -182,7 +163,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                                 }
                                Action.MAIL -> {
                                     actionIntent = Intent(Intent.ACTION_SEND, Uri.parse(url))
-                                    actionIntent.putExtra(android.content.Intent.EXTRA_EMAIL,
+                                    actionIntent.putExtra(Intent.EXTRA_EMAIL,
                                             arrayOf(url))
                                     actionIntent.type = "text/plain"
                                     startActivity(actionIntent)
@@ -214,7 +195,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                     }
                 } else if (receivedIntent.action == Constants.BROADCAST_TASKLIST_CHANGED) {
                     Log.i(TAG, "Tasklist changed, refiltering adapter")
-                    taskAdapter.setFilteredTasks(this@Simpletask, Config.mainQuery)
+                    taskAdapter.setFilteredTasks(this@Simpletask, TodoApplication.config.mainQuery)
                     runOnUiThread {
                         uiHandler.forEvent(Event.TASK_LIST_CHANGED)
                     }
@@ -243,16 +224,16 @@ class Simpletask : ThemedNoActionBarActivity() {
         setSupportActionBar(main_actionbar)
 
         // Replace drawables if the theme is dark
-        if (Config.isDarkTheme || Config.isBlackTheme) {
+        if (TodoApplication.config.isDarkTheme || TodoApplication.config.isBlackTheme) {
             actionbar_clear?.setImageResource(R.drawable.ic_close_white_24dp)
         }
         val versionCode = BuildConfig.VERSION_CODE
         if (TodoApplication.app.isAuthenticated) {
-            if (Config.latestChangelogShown < versionCode) {
+            if (TodoApplication.config.latestChangelogShown < versionCode) {
                 showChangelogOverlay(this)
-                Config.latestChangelogShown = versionCode
-            } else if (!Config.rightDrawerDemonstrated) {
-                Config.rightDrawerDemonstrated = true
+                TodoApplication.config.latestChangelogShown = versionCode
+            } else if (!TodoApplication.config.rightDrawerDemonstrated) {
+                TodoApplication.config.rightDrawerDemonstrated = true
                 openSavedFilterDrawer()
             }
         }
@@ -274,7 +255,6 @@ class Simpletask : ThemedNoActionBarActivity() {
                 Log.w(TAG, "Not implemented search")
            // Only change intent if it actually contains a applyFilter
         }
-        Config.lastScrollPosition = -1
         Log.i(TAG, "onNewIntent: $intent")
 
     }
@@ -283,8 +263,10 @@ class Simpletask : ThemedNoActionBarActivity() {
         super.onResume()
 
         Log.i(TAG, "onResume")
-        TodoList.reload(reason = "Main activity resume")
+        TodoApplication.todoList.reload(reason = "Main activity resume")
+        Log.i(TAG,"onResume -> handleIntent")
         handleIntent()
+        Log.i(TAG,"onResume <- handleIntent")
         uiHandler.forEvent(Event.RESUME)
     }
 
@@ -315,16 +297,21 @@ class Simpletask : ThemedNoActionBarActivity() {
         }
     }
 
+
+
     override fun onPause() {
-        (listView?.layoutManager as LinearLayoutManager?)?.let { manager ->
+        listView?.let{updateScrollPosition(it)}
+        super.onPause()
+    }
+
+    private fun updateScrollPosition(view: RecyclerView) {
+        (view.layoutManager as LinearLayoutManager?)?.let { manager ->
             val position = manager.findFirstVisibleItemPosition()
             val firstItemView = manager.findViewByPosition(position)
             val offset = firstItemView?.top ?: 0
-            Log.i(TAG, "Saving scroll offset $position, $offset")
-            Config.lastScrollPosition = position
-            Config.lastScrollOffset = offset
+            TodoApplication.config.lastScrollPosition = position
+            TodoApplication.config.lastScrollOffset = offset
         }
-        super.onPause()
     }
 
     override fun onBackPressed() {
@@ -337,7 +324,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                 }, Mode.SELECTION to {
             closeSelectionMode()
         }, Mode.MAIN to {
-            if (!Config.backClearsFilter || !Config.mainQuery.hasFilter()) {
+            if (!TodoApplication.config.backClearsFilter || !TodoApplication.config.mainQuery.hasFilter()) {
                 super.onBackPressed()
             } else {
                 clearFilter()
@@ -362,8 +349,8 @@ class Simpletask : ThemedNoActionBarActivity() {
 
 
     private fun closeSelectionMode() {
-        TodoList.clearSelection()
-        if (Config.hasKeepSelection) {
+        TodoApplication.todoList.clearSelection()
+        if (TodoApplication.config.hasKeepSelection) {
             // Refilter tasks to remove selected tasks which don't match the current filter
             uiHandler.forEvent(Event.FILTER_CHANGED)
         } else {
@@ -373,9 +360,9 @@ class Simpletask : ThemedNoActionBarActivity() {
 
     private fun selectedTasksAsString(): String {
         val result = ArrayList<String>()
-        TodoList.selectedTasks.forEach { task ->
-            val luaTxt = Interpreter.onDisplayCallback(Config.mainQuery.luaModule, task)
-            result.add(luaTxt ?: task.inFileFormat())
+        TodoApplication.todoList.selectedTasks.forEach { task ->
+            val luaTxt = Interpreter.onDisplayCallback(TodoApplication.config.mainQuery.luaModule, task)
+            result.add(luaTxt ?: task.inFileFormat(TodoApplication.config.useUUIDs))
         }
         return join(result, "\n")
     }
@@ -384,7 +371,7 @@ class Simpletask : ThemedNoActionBarActivity() {
         val selectedTasks = taskAdapter.visibleLines
                 .filterNot(VisibleLine::header)
                 .map { it.task!! }
-        TodoList.selectTasks(selectedTasks)
+        TodoApplication.todoList.selectTasks(selectedTasks)
     }
 
 
@@ -441,50 +428,43 @@ class Simpletask : ThemedNoActionBarActivity() {
                 }
             }
             val newQuery = Query(currentIntent, "mainui")
-            Config.mainQuery = newQuery
+            TodoApplication.config.mainQuery = newQuery
             // Query is saved clear action from intent
             intent.action = ""
             newQuery
         } else {
             // Set previous filters and sort
             Log.i(TAG, "handleIntent: from m_prefs state")
-            Config.mainQuery
+            TodoApplication.config.mainQuery
         }
 
-
-        showListViewProgress(true)
         if (currentIntent.hasExtra(Constants.INTENT_SELECTED_TASK_LINE)) {
             Log.d(TAG, "Selection from intent")
             val position = currentIntent.getIntExtra(Constants.INTENT_SELECTED_TASK_LINE, -1)
             currentIntent.removeExtra(Constants.INTENT_SELECTED_TASK_LINE)
             intent = currentIntent
             if (position > -1) {
-                val itemAtPosition = TodoList.getTaskAt(position)
+                val itemAtPosition = TodoApplication.todoList.getTaskAt(position)
                 itemAtPosition?.let {
-                    TodoList.clearSelection()
-                    TodoList.selectTasks(listOf(itemAtPosition))
+                    TodoApplication.todoList.clearSelection()
+                    TodoApplication.todoList.selectTasks(listOf(itemAtPosition))
+                    TodoApplication.config.lastScrollPosition = taskAdapter.getPosition(it)
+                    TodoApplication.config.lastScrollOffset = 0
                 }
 
             }
         }
-        taskAdapter.setFilteredTasks(this, query)
-
 
         listView?.layoutManager = LinearLayoutManager(this)
         listView?.adapter = this.taskAdapter
 
-        fab.setOnClickListener { startAddTaskActivity() }
-
-        // If we were started from the widget, select the pushed task
-        // next scroll to the first selected item
-
-
-        Log.d(TAG, "Scroll selection")
-        val selection = TodoList.selectedTasks
-        if (selection.isNotEmpty()) {
-            val selectedTask = selection[0]
-            m_scrollPosition = taskAdapter.getPosition(selectedTask)
+        taskAdapter.setFilteredTasks(this, query)
+        val listener = ViewTreeObserver.OnScrollChangedListener {
+            listView?.let { updateScrollPosition(it) }
         }
+        listView?.viewTreeObserver?.addOnScrollChangedListener(listener)
+
+        fab.setOnClickListener { startAddTaskActivity() }
     }
 
 
@@ -496,7 +476,7 @@ class Simpletask : ThemedNoActionBarActivity() {
 
     private fun updateCompletionCheckboxState() {
         val cbItem = toolbar.menu.findItem(R.id.multicomplete_checkbox) ?: return
-        val selectedTasks = TodoList.selectedTasks
+        val selectedTasks = TodoApplication.todoList.selectedTasks
         val count = selectedTasks.count()
         val completedCount = selectedTasks.count { it.isCompleted() }
         when (completedCount) {
@@ -555,7 +535,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                     }
 
                     inflater.inflate(R.menu.task_context_actionbar, menu)
-                    title = "${TodoList.numSelected()}"
+                    title = "${TodoApplication.todoList.numSelected()}"
                     toggle.isDrawerIndicatorEnabled = false
                     fab.visibility = View.GONE
                     toolbar.setOnMenuItemClickListener { item ->
@@ -564,7 +544,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                     toolbar.visibility = View.VISIBLE
                     toolbar.menu.clear()
                     inflater.inflate(R.menu.task_context, toolbar.menu)
-                    if (!Config.useListAndTagIcons) {
+                    if (!TodoApplication.config.useListAndTagIcons) {
                         toolbar.menu?.apply {
                             findItem(R.id.update_lists)?.setIcon(R.drawable.ic_action_todotxt_lists)
                             findItem(R.id.update_tags)?.setIcon(R.drawable.ic_action_todotxt_tags)
@@ -575,7 +555,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                     updateCompletionCheckboxState()
                     selection_fab.visibility = View.VISIBLE
                     selection_fab.setOnClickListener {
-                        createCalendarAppointment(TodoList.selectedTasks)
+                        createCalendarAppointment(TodoApplication.todoList.selectedTasks)
                     }
                 },
 
@@ -600,8 +580,8 @@ class Simpletask : ThemedNoActionBarActivity() {
                     inflater.inflate(R.menu.main, menu)
 
                     populateSearch(menu)
-                    if (Config.showTodoPath) {
-                        title = Config.todoFileName.replace("([^/])[^/]*/".toRegex(), "$1/")
+                    if (TodoApplication.config.showTodoPath) {
+                        title = TodoApplication.config.todoFileName.replace("([^/])[^/]*/".toRegex(), "$1/")
                     } else {
                         title =
                             if (MyInterpreter.originDate?:TodoApplication.app.today == TodoApplication.app.today)
@@ -613,6 +593,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                     fab.visibility = View.VISIBLE
                     selection_fab.visibility = View.GONE
                     toolbar.visibility = View.GONE
+                    true
                 }))
         return true
     }
@@ -627,7 +608,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             when {
                 isDrawerOpen(SAVED_FILTER_DRAWER) -> actions[Mode.SAVED_FILTER_DRAWER]?.invoke()
                 isDrawerOpen(QUICK_FILTER_DRAWER) -> actions[Mode.QUICK_FILTER_DRAWER]?.invoke()
-                TodoList.selectedTasks.isNotEmpty() -> actions[Mode.SELECTION]?.invoke()
+                TodoApplication.todoList.selectedTasks.isNotEmpty() -> actions[Mode.SELECTION]?.invoke()
                 else -> actions[Mode.MAIN]?.invoke()
             }
         }
@@ -661,7 +642,7 @@ class Simpletask : ThemedNoActionBarActivity() {
 
         val searchView = searchMenu.actionView as SearchView
         searchView.setSearchableInfo(searchManager.getSearchableInfo(componentName))
-        val activeTextSearch = Config.mainQuery.search
+        val activeTextSearch = TodoApplication.config.mainQuery.search
         if (!activeTextSearch.isNullOrEmpty()) {
             searchView.setQuery(activeTextSearch, false)
             searchView.isActivated = true
@@ -699,9 +680,9 @@ class Simpletask : ThemedNoActionBarActivity() {
 
             override fun onQueryTextChange(newText: String): Boolean {
                 if (!m_ignoreSearchChangeCallback) {
-                    val query = Config.mainQuery
+                    val query = TodoApplication.config.mainQuery
                     query.search = newText
-                    Config.mainQuery = query
+                    TodoApplication.config.mainQuery = query
                     uiHandler.forEvent(Event.FILTER_CHANGED)
                 }
                 return true
@@ -723,8 +704,8 @@ class Simpletask : ThemedNoActionBarActivity() {
         builder.setSingleChoiceItems(priorityArr, priorityIdx, { dialog, which ->
             dialog.dismiss()
             val priority = Priority.toPriority(priorityArr[which])
-            TodoList.prioritize(tasks, priority)
-            TodoList.notifyTasklistChanged(Config.todoFileName, true)
+            TodoApplication.todoList.prioritize(tasks, priority)
+            TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
         })
         builder.show()
 
@@ -737,11 +718,11 @@ class Simpletask : ThemedNoActionBarActivity() {
     }
 
     private fun completeTasks(tasks: List<Task>) {
-        TodoList.complete(tasks, Config.hasKeepPrio, Config.hasAppendAtEnd)
-        if (Config.isAutoArchive) {
+        TodoApplication.todoList.complete(tasks, TodoApplication.config.hasKeepPrio, TodoApplication.config.hasAppendAtEnd)
+        if (TodoApplication.config.isAutoArchive) {
             archiveTasks(false)
         }
-        TodoList.notifyTasklistChanged(Config.todoFileName, true)
+        TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
     }
 
     private fun uncompleteTasks(task: Task) {
@@ -751,8 +732,8 @@ class Simpletask : ThemedNoActionBarActivity() {
     }
 
     private fun uncompleteTasks(tasks: List<Task>) {
-        TodoList.uncomplete(tasks)
-        TodoList.notifyTasklistChanged(Config.todoFileName, true)
+        TodoApplication.todoList.uncomplete(tasks)
+        TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
     }
 
     private fun deferTasks(tasks: List<Task>, dateType: DateType) {
@@ -774,21 +755,21 @@ class Simpletask : ThemedNoActionBarActivity() {
                         var startMonth = month
                         startMonth++
                         val date = DateTime.forDateOnly(year, startMonth, day)
-                        TodoList.defer(date.format(Constants.DATE_FORMAT), tasks, dateType)
-                        TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                        TodoApplication.todoList.defer(date.format(Constants.DATE_FORMAT), tasks, dateType)
+                        TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
                     },
                             today.year!!,
                             today.month!! - 1,
                             today.day!!)
 
-                    val showCalendar = Config.showCalendar
+                    val showCalendar = TodoApplication.config.showCalendar
                     dialog.datePicker.calendarViewShown = showCalendar
                     dialog.datePicker.spinnersShown = !showCalendar
                     dialog.show()
                 } else {
 
-                    TodoList.defer(input, tasks, dateType)
-                    TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                    TodoApplication.todoList.defer(input, tasks, dateType)
+                    TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
 
                 }
 
@@ -802,8 +783,8 @@ class Simpletask : ThemedNoActionBarActivity() {
         val title = getString(R.string.delete_task_title)
                 .replaceFirst(Regex("%s"), numTasks.toString())
         val delete = DialogInterface.OnClickListener { _, _ ->
-            TodoList.removeAll(tasks)
-            TodoList.notifyTasklistChanged(Config.todoFileName, true)
+            TodoApplication.todoList.removeAll(tasks)
+            TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
             invalidateOptionsMenu()
         }
         showConfirmationDialog(this, R.string.delete_task_message, delete, title)
@@ -824,20 +805,20 @@ class Simpletask : ThemedNoActionBarActivity() {
                         startMonth++
                         val date = DateTime.forDateOnly(year, startMonth, day)
                         MyInterpreter.originDate = date.format(Constants.DATE_FORMAT)
-                        TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                        TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
                     },
                         today.year!!,
                         today.month!! - 1,
                         today.day!!)
 
-                    val showCalendar = Config.showCalendar
+                    val showCalendar = TodoApplication.config.showCalendar
                     dialog.datePicker.calendarViewShown = showCalendar
                     dialog.datePicker.spinnersShown = !showCalendar
                     dialog.show()
                 } else {
 
                     MyInterpreter.originDate = input
-                    TodoList.notifyTasklistChanged(Config.todoFileName, true)
+                    TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
                 }
 
             }
@@ -846,7 +827,7 @@ class Simpletask : ThemedNoActionBarActivity() {
     }
 
     private fun archiveTasks(showDialog: Boolean = true) {
-        val selection = TodoList.selectedTasks
+        val selection = TodoApplication.todoList.selectedTasks
 
         val tasksToArchive =  ArrayList<Task>()
         if (selection.isNotEmpty()) {
@@ -859,11 +840,12 @@ class Simpletask : ThemedNoActionBarActivity() {
         }
 
         val archiveAction = {
-            if (Config.todoFileName == Config.doneFileName) {
+            if (TodoApplication.config.todoFileName == TodoApplication.config.doneFileName) {
                 showToastShort(this, "You have the done.txt file opened.")
+            } else {
+                TodoApplication.todoList.archive(TodoApplication.config.todoFileName, TodoApplication.config.doneFileName, tasksToArchive, TodoApplication.config.eol)
+                invalidateOptionsMenu()
             }
-            TodoList.archive(Config.todoFileName, Config.doneFileName, tasksToArchive, Config.eol)
-            invalidateOptionsMenu()
         }
         val numTasks = tasksToArchive.size
         if (numTasks == 0) {
@@ -882,7 +864,7 @@ class Simpletask : ThemedNoActionBarActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         Log.i(TAG, "onMenuItemSelected: " + item.itemId)
-        val checkedTasks = TodoList.selectedTasks
+        val checkedTasks = TodoApplication.todoList.selectedTasks
         when (item.itemId) {
             androidId.home -> {
                 handleMode(mapOf(
@@ -900,14 +882,14 @@ class Simpletask : ThemedNoActionBarActivity() {
             R.id.context_delete -> deleteTasks(checkedTasks)
             R.id.context_select_all -> selectAllTasks()
             R.id.share -> {
-                val shareText = TodoList.fileFormat
+                val shareText = TodoApplication.todoList.fileFormat
                 shareText(this@Simpletask, "Simpletask list", shareText)
             }
             R.id.context_share -> {
                 val shareText = selectedTasksAsString()
                 shareText(this@Simpletask, "Simpletask tasks", shareText)
             }
-            R.id.context_archive -> archiveTasks(Config.showConfirmationDialogs)
+            R.id.context_archive -> archiveTasks(TodoApplication.config.showConfirmationDialogs)
             R.id.help -> showHelp()
             R.id.open_lua -> openLuaConfig()
             R.id.sync -> {
@@ -929,7 +911,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             R.id.menu_export_filter_export -> {
                 FileStoreActionQueue.add("Exporting filters") {
                     try {
-                        QueryStore.exportFilters(File(Config.todoFile.parent, "saved_filters.txt"))
+                        QueryStore.exportFilters(FileStore.sibling(TodoApplication.config.todoFileName, "saved_filters.txt"))
                         showToastShort(this, R.string.saved_filters_exported)
                     } catch (e: Exception) {
                         Log.e(TAG, "Export filters failed", e)
@@ -939,7 +921,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             }
             R.id.menu_export_filter_import -> {
                 FileStoreActionQueue.add("Importing filters") {
-                    val importFile = File(Config.todoFile.parent, "saved_filters.txt")
+                    val importFile = FileStore.sibling(TodoApplication.config.todoFileName, "saved_filters.txt")
                     try {
                         QueryStore.importFilters(importFile)
                         showToastShort(this, R.string.saved_filters_imported)
@@ -947,8 +929,8 @@ class Simpletask : ThemedNoActionBarActivity() {
 
                     } catch (e: Exception) {
                         // Need to catch generic exception because Dropbox errors don't inherit from IOException
-                        Log.e(Simpletask.TAG, "Import filters, cant read file ${importFile.canonicalPath}", e)
-                        showToastLong(this, "Error reading file ${importFile.canonicalPath}")
+                        Log.e(TAG, "Import filters, cant read file ${importFile}", e)
+                        showToastLong(this, "Error reading file ${importFile}")
                     }
                 }
             }
@@ -960,10 +942,13 @@ class Simpletask : ThemedNoActionBarActivity() {
     private fun createCalendarAppointment(checkedTasks: List<Task>) {
         var calendarTitle = getString(R.string.calendar_title)
         var calendarDescription = ""
+        if (checkedTasks.isEmpty()) {
+            return
+        }
         if (checkedTasks.size == 1) {
             // Set the task as title
             val task = checkedTasks[0]
-            val luaTxt = Interpreter.onDisplayCallback(Config.mainQuery.luaModule, task)
+            val luaTxt = Interpreter.onDisplayCallback(TodoApplication.config.mainQuery.luaModule, task)
             calendarTitle = luaTxt ?: task.text
         } else {
             // Set the tasks as description
@@ -977,7 +962,7 @@ class Simpletask : ThemedNoActionBarActivity() {
         }
         // Explicitly set start and end date/time.
         // Some calendar providers need this.
-        val dueDate = checkedTasks[0].dueDate
+        val dueDate = checkedTasks.getOrNull(0)?.dueDate
         val calDate = if (checkedTasks.size == 1 && dueDate != null) {
             val year = dueDate.substring(0, 4).toInt()
             val month = dueDate.substring(5, 7).toInt() - 1
@@ -997,7 +982,7 @@ class Simpletask : ThemedNoActionBarActivity() {
     private fun startAddTaskActivity() {
         Log.i(TAG, "Starting addTask activity")
 
-        TodoList.editTasks(this, TodoList.selectedTasks, Config.mainQuery.prefill)
+        TodoApplication.todoList.editTasks(this, TodoApplication.todoList.selectedTasks, TodoApplication.config.mainQuery.prefill)
     }
 
     private fun startPreferencesActivity() {
@@ -1025,12 +1010,12 @@ class Simpletask : ThemedNoActionBarActivity() {
         // Set an EditText view to get user input
         val input = EditText(this)
         alert.setView(input)
-        input.setText(Config.mainQuery.proposedName)
+        input.setText(TodoApplication.config.mainQuery.proposedName)
 
         alert.setPositiveButton("Ok") { _, _ ->
             val value = input.text?.toString()?.takeIf { it.isNotBlank() }
             value?.let {
-                QueryStore.save(Config.mainQuery, it)
+                QueryStore.save(TodoApplication.config.mainQuery, it)
                 uiHandler.forEvent(Event.SAVED_FILTER_ADDED)
             }
             value ?: showToastShort(applicationContext, R.string.filter_name_empty)
@@ -1041,8 +1026,8 @@ class Simpletask : ThemedNoActionBarActivity() {
     }
 
     private fun clearFilter() {
-        Config.mainQuery = Config.mainQuery.clear()
-        intent = Config.mainQuery.saveInIntent(intent)
+        TodoApplication.config.mainQuery = TodoApplication.config.mainQuery.clear()
+        intent = TodoApplication.config.mainQuery.saveInIntent(intent)
         uiHandler.forEvent(Event.CLEAR_FILTER)
     }
 
@@ -1092,7 +1077,7 @@ class Simpletask : ThemedNoActionBarActivity() {
 
     fun startFilterActivity() {
         val i = Intent(this, FilterActivity::class.java)
-        Config.mainQuery.saveInIntent(i)
+        TodoApplication.config.mainQuery.saveInIntent(i)
         startActivity(i)
     }
 
@@ -1114,27 +1099,27 @@ class Simpletask : ThemedNoActionBarActivity() {
 
     private fun updateLists(checkedTasks: List<Task>) {
         updateItemsDialog(
-                Config.listTerm,
+                TodoApplication.config.listTerm,
                 checkedTasks,
-                TodoList.contexts,
+                TodoApplication.todoList.contexts,
                 Task::lists,
                 Task::addList,
                 Task::removeList
         ) {
-            TodoList.notifyTasklistChanged(Config.todoFileName, true)
+            TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
         }
     }
 
     private fun updateTags(checkedTasks: List<Task>) {
         updateItemsDialog(
-                Config.tagTerm,
+                TodoApplication.config.tagTerm,
                 checkedTasks,
-                TodoList.projects,
+                TodoApplication.todoList.projects,
                 Task::tags,
                 Task::addTag,
                 Task::removeTag
         ) {
-            TodoList.notifyTasklistChanged(Config.todoFileName, true)
+            TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
         }
     }
 
@@ -1145,14 +1130,14 @@ class Simpletask : ThemedNoActionBarActivity() {
             runOnUiThread {
                 when (event) {
                     Event.SAVED_FILTER_ITEM_CLICK -> {
-                        updateTaskList(Config.mainQuery) {
+                        updateTaskList(TodoApplication.config.mainQuery) {
                             updateFilterBar()
                             updateQuickFilterDrawer()
                         }
                     }
                     Event.QUICK_FILTER_ITEM_CLICK,
                     Event.CLEAR_FILTER -> {
-                        updateTaskList(Config.mainQuery) {
+                        updateTaskList(TodoApplication.config.mainQuery) {
                             updateFilterBar()
                             updateQuickFilterDrawer()
                         }
@@ -1166,14 +1151,14 @@ class Simpletask : ThemedNoActionBarActivity() {
                         updateSavedFilterDrawer()
                     }
                     Event.TASK_LIST_CHANGED -> {
-                        updateTaskList(Config.mainQuery) {
+                        updateTaskList(TodoApplication.config.mainQuery) {
                             updateFilterBar()
                             updateQuickFilterDrawer()
                             updateCompletionCheckboxState()
                         }
                     }
                     Event.FILTER_CHANGED -> {
-                        updateTaskList(Config.mainQuery) {
+                        updateTaskList(TodoApplication.config.mainQuery) {
                             updateFilterBar()
                             updateQuickFilterDrawer()
                         }
@@ -1185,7 +1170,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                         updateConnectivityIndicator()
                     }
                     Event.FONT_SIZE_CHANGED -> {
-                        updateTaskList(Config.mainQuery) {
+                        updateTaskList(TodoApplication.config.mainQuery) {
                             updateFilterBar()
                             updateQuickFilterDrawer()
                         }
@@ -1202,18 +1187,18 @@ class Simpletask : ThemedNoActionBarActivity() {
 
         private fun updateFilterBar() {
             actionbar.visibility = when {
-                Config.mainQuery.hasFilter() -> View.VISIBLE
+                TodoApplication.config.mainQuery.hasFilter() -> View.VISIBLE
                 else -> View.GONE
             }
             Log.d(TAG, "Update applyFilter bar")
             val count = taskAdapter.countVisibleTasks
             val total = taskAdapter.countTotalTasks
-            filter_text.text = Config.mainQuery.getTitle(
+            filter_text.text = TodoApplication.config.mainQuery.getTitle(
                     count,
                     total,
                     getText(R.string.priority_prompt),
-                    Config.tagTerm,
-                    Config.listTerm,
+                    TodoApplication.config.tagTerm,
+                    TodoApplication.config.listTerm,
                     getText(R.string.search),
                     getText(R.string.script),
                     getText(R.string.title_filter_applied),
@@ -1239,7 +1224,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                     queries[position].let {
                         val query = it.second.query
                         intent = query.saveInIntent(intent)
-                        Config.mainQuery = query
+                        TodoApplication.config.mainQuery = query
                         taskAdapter.setFilteredTasks(this@Simpletask, query)
                         runOnUiThread {
                             closeDrawer(SAVED_FILTER_DRAWER)
@@ -1257,7 +1242,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                             R.id.menu_saved_filter_delete -> deleteSavedQuery(query.first)
                             R.id.menu_saved_filter_shortcut -> createFilterShortcut(query.second)
                             R.id.menu_saved_filter_rename -> renameSavedQuery(query.first)
-                            R.id.menu_saved_filter_update -> updateSavedQuery(query.second, Config.mainQuery)
+                            R.id.menu_saved_filter_update -> updateSavedQuery(query.second, TodoApplication.config.mainQuery)
                             else -> {
                             }
                         }
@@ -1280,29 +1265,30 @@ class Simpletask : ThemedNoActionBarActivity() {
 
         private fun updateQuickFilterDrawer() {
             updateFilterBar()
-            val decoratedContexts = alfaSort(TodoList.contexts, Config.sortCaseSensitive, prefix = "-").map { "@$it" }
-            val decoratedProjects = alfaSort(TodoList.projects, Config.sortCaseSensitive, prefix = "-").map { "+$it" }
+            val decoratedContexts = alfaSort(TodoApplication.todoList.contexts, TodoApplication.config.sortCaseSensitive, prefix = "-").map { "@$it" }
+            val decoratedProjects = alfaSort(TodoApplication.todoList.projects, TodoApplication.config.sortCaseSensitive, prefix = "-").map { "+$it" }
             val drawerAdapter = DrawerAdapter(layoutInflater,
-                    Config.listTerm,
+                    TodoApplication.config.listTerm,
                     decoratedContexts,
-                    Config.tagTerm,
+                    TodoApplication.config.tagTerm,
                     decoratedProjects)
 
             filter_drawer.adapter = drawerAdapter
             filter_drawer.choiceMode = AbsListView.CHOICE_MODE_MULTIPLE
             filter_drawer.onItemClickListener = DrawerItemClickListener()
 
-            Config.mainQuery.contexts.asSequence()
+
+            TodoApplication.config.mainQuery.contexts.asSequence()
                     .map { drawerAdapter.getIndexOf("@$it") }
                     .filter { it != -1 }
                     .forEach { filter_drawer.setItemChecked(it, true) }
 
-            Config.mainQuery.projects.asSequence()
+            TodoApplication.config.mainQuery.projects.asSequence()
                     .map { drawerAdapter.getIndexOf("+$it") }
                     .filter { it != -1 }
                     .forEach { filter_drawer.setItemChecked(it, true) }
-            filter_drawer.setItemChecked(drawerAdapter.contextHeaderPosition, Config.mainQuery.contextsNot)
-            filter_drawer.setItemChecked(drawerAdapter.projectsHeaderPosition, Config.mainQuery.projectsNot)
+            filter_drawer.setItemChecked(drawerAdapter.contextHeaderPosition, TodoApplication.config.mainQuery.contextsNot)
+            filter_drawer.setItemChecked(drawerAdapter.projectsHeaderPosition, TodoApplication.config.mainQuery.projectsNot)
             filter_drawer.deferNotifyDataSetChanged()
         }
 
@@ -1310,7 +1296,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             // Show connectivity status indicator
             // Red -> changes pending
             // Yellow -> offline
-            if (Config.changesPending) {
+            if (TodoApplication.config.changesPending) {
                 pendingchanges.visibility = View.VISIBLE
                 offline.visibility = View.GONE
             } else if (!FileStore.isOnline) {
@@ -1330,7 +1316,7 @@ class Simpletask : ThemedNoActionBarActivity() {
             val tags: ArrayList<String>
             val lv = parent as ListView
             val adapter = lv.adapter as DrawerAdapter
-            val query = Config.mainQuery
+            val query = TodoApplication.config.mainQuery
             if (adapter.projectsHeaderPosition == position) {
                 query.projectsNot = !query.projectsNot
             }
@@ -1352,9 +1338,9 @@ class Simpletask : ThemedNoActionBarActivity() {
             query.contexts = filteredContexts
             query.projects = filteredProjects
 
-            Config.mainQuery = query
-            if (!Config.hasKeepSelection) {
-                TodoList.clearSelection()
+            TodoApplication.config.mainQuery = query
+            if (!TodoApplication.config.hasKeepSelection) {
+                TodoApplication.todoList.clearSelection()
             }
             uiHandler.forEvent(Event.QUICK_FILTER_ITEM_CLICK)
         }

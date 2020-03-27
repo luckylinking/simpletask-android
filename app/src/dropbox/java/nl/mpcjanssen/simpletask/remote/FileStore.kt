@@ -28,7 +28,7 @@ object FileStore : IFileStore {
 
     private val mApp = TodoApplication.app
 
-    var accessToken by Config.StringOrNullPreference(OAUTH2_TOKEN)
+    var accessToken by TodoApplication.config.StringOrNullPreference(OAUTH2_TOKEN)
 
     var _dbxClient: DbxClientV2? = null
 
@@ -37,15 +37,12 @@ object FileStore : IFileStore {
             val newclient = _dbxClient ?: initDbxClient()
             _dbxClient = newclient
             return newclient
-
-
         }
 
     private fun initDbxClient(): DbxClientV2 {
         val requestConfig = DbxRequestConfig.newBuilder("simpletask").build()
         return DbxClientV2(requestConfig, accessToken)
     }
-
 
     override val isAuthenticated: Boolean
         get() {
@@ -123,30 +120,35 @@ object FileStore : IFileStore {
         return LoginScreen::class
     }
 
-    @Synchronized
     @Throws(IOException::class)
-    override fun saveTasksToFile(path: String, lines: List<String>, eol: String) {
+    override fun saveTasksToFile(path: String, lines: List<String>, lastSeen: String?, eol: String) : String {
         Log.i(TAG, "Saving ${lines.size} tasks to Dropbox.")
         val contents = join(lines, eol) + eol
 
-        var rev = Config.lastSeenRemoteId
+        val rev = lastSeen
+        Log.i(TAG, "Last seen rev $rev")
+
         val toStore = contents.toByteArray(charset("UTF-8"))
         val `in` = ByteArrayInputStream(toStore)
-        Log.i(TAG, "Saving to file " + path)
+        Log.i(TAG, "Saving to file $path")
         val uploadBuilder = dbxClient.files().uploadBuilder(path)
         uploadBuilder.withAutorename(true).withMode(if (rev != null) WriteMode.update(rev) else null)
-        val uploaded = uploadBuilder.uploadAndFinish(`in`)
-        Config.lastSeenRemoteId = uploaded.rev
+        val uploaded = try {
+             uploadBuilder.uploadAndFinish(`in`)
+        }  finally {
+            `in`.close()
+        }
         Log.i(TAG, "New rev " + uploaded.rev)
         val newName = uploaded.pathDisplay
 
         if (newName != path) {
             // The file was written under another name
             // Usually this means the was a conflict.
-            Log.i(TAG, "Filename was changed remotely. New name is: " + newName)
-            showToastLong(mApp, "Filename was changed remotely. New name is: " + newName)
+            Log.i(TAG, "Filename was changed remotely. New name is: $newName")
+            showToastLong(mApp, "Filename was changed remotely. New name is: $newName")
             mApp.switchTodoFile(newName)
         }
+        return uploaded.rev
     }
 
     override fun appendTaskToFile(path: String, lines: List<String>, eol: String) {
@@ -175,15 +177,15 @@ object FileStore : IFileStore {
         dbxClient.files().uploadBuilder(path).withAutorename(true).withMode(if (rev != null) WriteMode.update(rev) else null).uploadAndFinish(`in`)
     }
 
-    override fun writeFile(file: File, contents: String) {
+    override fun writeFile(path: String, contents: String) {
         if (!isAuthenticated) {
-            Log.e(TAG, "Not authenticated, file ${file.canonicalPath} not written.")
+            Log.e(TAG, "Not authenticated, file ${path} not written.")
             return
         }
         val toStore = contents.toByteArray(charset("UTF-8"))
-        Log.d(TAG, "Write to file ${file.canonicalPath}")
+        Log.d(TAG, "Write to file ${path}")
         val inStream = ByteArrayInputStream(toStore)
-        dbxClient.files().uploadBuilder(file.path).withMode(WriteMode.OVERWRITE).uploadAndFinish(inStream)
+        dbxClient.files().uploadBuilder(path).withMode(WriteMode.OVERWRITE).uploadAndFinish(inStream)
     }
 
     @Throws(IOException::class)
@@ -206,7 +208,7 @@ object FileStore : IFileStore {
     }
 
     override fun getDefaultPath(): String {
-        return if (Config.fullDropBoxAccess) {
+        return if (TodoApplication.config.fullDropBoxAccess) {
             "/todo/todo.txt"
         } else {
             "/todo.txt"

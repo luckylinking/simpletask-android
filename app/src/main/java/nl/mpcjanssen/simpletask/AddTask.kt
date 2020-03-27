@@ -68,7 +68,7 @@ class AddTask : ThemedActionBarActivity() {
         setContentView(R.layout.add_task)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close_white_24dp)
-        if (!Config.useListAndTagIcons) {
+        if (!TodoApplication.config.useListAndTagIcons) {
             btnContext.setImageResource(R.drawable.ic_action_todotxt_lists)
             btnProject.setImageResource(R.drawable.ic_action_todotxt_tags)
 
@@ -83,7 +83,7 @@ class AddTask : ThemedActionBarActivity() {
 
         Log.d(TAG, "Fill addtask")
 
-        val pendingTasks = TodoList.pendingEdits.map { it.inFileFormat() }
+        val pendingTasks = TodoApplication.todoList.pendingEdits.map { it.inFileFormat(TodoApplication.config.useUUIDs) }
             val preFillString = when {
                 pendingTasks.isNotEmpty() -> {
                     setTitle(R.string.updatetask)
@@ -165,22 +165,22 @@ class AddTask : ThemedActionBarActivity() {
 
         // Set checkboxes
         val menuWordWrap = menu.findItem(R.id.menu_word_wrap)
-        menuWordWrap.isChecked = Config.isWordWrap
+        menuWordWrap.isChecked = TodoApplication.config.isWordWrap
 
         val menuCapitalizeTasks = menu.findItem(R.id.menu_capitalize_tasks)
-        menuCapitalizeTasks.isChecked = Config.isCapitalizeTasks
+        menuCapitalizeTasks.isChecked = TodoApplication.config.isCapitalizeTasks
 
         return true
     }
 
     private fun setInputType() {
         val basicType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        if (Config.isCapitalizeTasks) {
+        if (TodoApplication.config.isCapitalizeTasks) {
             taskText.inputType = basicType or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         } else {
             taskText.inputType = basicType
         }
-        setWordWrap(Config.isWordWrap)
+        setWordWrap(TodoApplication.config.isWordWrap)
 
     }
 
@@ -191,13 +191,13 @@ class AddTask : ThemedActionBarActivity() {
                 finishEdit(confirmation = true)
             }
             R.id.menu_word_wrap -> {
-                val newVal = !Config.isWordWrap
-                Config.isWordWrap = newVal
+                val newVal = !TodoApplication.config.isWordWrap
+                TodoApplication.config.isWordWrap = newVal
                 setWordWrap(newVal)
                 item.isChecked = !item.isChecked
             }
             R.id.menu_capitalize_tasks -> {
-                Config.isCapitalizeTasks = !Config.isCapitalizeTasks
+                TodoApplication.config.isCapitalizeTasks = !TodoApplication.config.isCapitalizeTasks
                 setInputType()
                 item.isChecked = !item.isChecked
             }
@@ -216,7 +216,7 @@ class AddTask : ThemedActionBarActivity() {
     }
 
     private fun saveTasksAndClose() {
-        val todoList = TodoList
+        val todoList = TodoApplication.todoList
         // strip line breaks
         val input: String = taskText.text.toString()
 
@@ -229,25 +229,25 @@ class AddTask : ThemedActionBarActivity() {
 
         // Update the TodoList with changes
         val enteredTasks = getTasks().dropLastWhile { it.text.isEmpty() }.map { task ->
-            if (Config.hasPrependDate) {
+            if (TodoApplication.config.hasPrependDate) {
                 Task(task.text, todayAsString)
             } else {
                 task
             }
         }
-        val origTasks = TodoList.pendingEdits
+        val origTasks = todoList.pendingEdits
         Log.i(TAG, "Saving ${enteredTasks.size} tasks, updating $origTasks tasks")
-        TodoList.update(origTasks, enteredTasks, Config.hasAppendAtEnd)
+        todoList.update(origTasks, enteredTasks, TodoApplication.config.hasAppendAtEnd)
 
         // Save
-        todoList.notifyTasklistChanged(Config.todoFileName, true, false)
+        todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true, false)
 
         finishEdit(confirmation = false)
     }
 
     private fun finishEdit(confirmation: Boolean) {
         val close = DialogInterface.OnClickListener { _, _ ->
-            TodoList.clearPendingEdits()
+            TodoApplication.todoList.clearPendingEdits()
             finish()
         }
         if (confirmation && (taskText.text.toString() != startText)) {
@@ -293,7 +293,7 @@ class AddTask : ThemedActionBarActivity() {
                             today.month!! - 1,
                             today.day!!)
 
-                    val showCalendar = Config.showCalendar
+                    val showCalendar = TodoApplication.config.showCalendar
                     dialog.datePicker.calendarViewShown = showCalendar
                     dialog.datePicker.spinnersShown = !showCalendar
                     dialog.show()
@@ -326,7 +326,7 @@ class AddTask : ThemedActionBarActivity() {
     private fun showTagMenu() {
         val items = TreeSet<String>()
 
-        items.addAll(TodoList.projects)
+        items.addAll(TodoApplication.todoList.projects)
         // Also display projects in tasks being added
         val tasks = getTasks()
         if (tasks.size == 0) {
@@ -339,7 +339,7 @@ class AddTask : ThemedActionBarActivity() {
         val task = getTasks().getOrElse(idx) { Task("") }
 
         updateItemsDialog(
-                Config.tagTerm,
+                TodoApplication.config.tagTerm,
                 listOf(task),
                 ArrayList(items),
                 Task::tags,
@@ -377,7 +377,7 @@ class AddTask : ThemedActionBarActivity() {
     private fun showListMenu() {
         val items = TreeSet<String>()
 
-        items.addAll(TodoList.contexts)
+        items.addAll(TodoApplication.todoList.contexts)
         // Also display contexts in tasks being added
         val tasks = getTasks()
         if (tasks.size == 0) {
@@ -391,7 +391,7 @@ class AddTask : ThemedActionBarActivity() {
         val task = getTasks().getOrElse(idx) { Task("") }
 
         updateItemsDialog(
-                Config.listTerm,
+                TodoApplication.config.listTerm,
                 listOf(task),
                 ArrayList(items),
                 Task::lists,
@@ -433,7 +433,7 @@ class AddTask : ThemedActionBarActivity() {
         if (currentLine != -1) {
             val t = Task(lines[currentLine])
             t.dueDate = newDueDate.toString()
-            lines[currentLine] = t.inFileFormat()
+            lines[currentLine] = t.inFileFormat(TodoApplication.config.useUUIDs)
             taskText.setText(join(lines, "\n"))
         }
         restoreSelection(start, length, false)
@@ -455,7 +455,7 @@ class AddTask : ThemedActionBarActivity() {
         if (currentLine != -1) {
             val t = Task(lines[currentLine])
             t.thresholdDate = newThresholdDate.toString()
-            lines[currentLine] = t.inFileFormat()
+            lines[currentLine] = t.inFileFormat(TodoApplication.config.useUUIDs)
             taskText.setText(join(lines, "\n"))
         }
         restoreSelection(start, length, false)
@@ -477,7 +477,7 @@ class AddTask : ThemedActionBarActivity() {
         if (currentLine != -1) {
             val t = Task(lines[currentLine])
             t.reviewDate = newReviewDate.toString()
-            lines[currentLine] = t.inFileFormat()
+            lines[currentLine] = t.inFileFormat(TodoApplication.config.useUUIDs)
             taskText.setText(join(lines, "\n"))
         }
         restoreSelection(start, length, false)
@@ -518,7 +518,7 @@ class AddTask : ThemedActionBarActivity() {
             val t = Task(lines[currentLine])
             Log.d(TAG, "Changing priority from " + t.priority.toString() + " to " + newPriority.toString())
             t.priority = Priority.toPriority(newPriority.toString())
-            lines[currentLine] = t.inFileFormat()
+            lines[currentLine] = t.inFileFormat(TodoApplication.config.useUUIDs)
             taskText.setText(join(lines, "\n"))
         }
         restoreSelection(start, length, true)

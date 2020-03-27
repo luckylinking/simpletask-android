@@ -28,11 +28,11 @@ class ScriptConfigScreen : ThemedActionBarActivity() {
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_close_white_24dp)
 
         scriptEdit = findViewById<EditText>(R.id.lua_config)
-        script = Config.luaConfig
+        script = TodoApplication.config.luaConfig
 
         val fab = findViewById<FloatingActionButton>(R.id.lua_config_fab)
         fab?.setOnClickListener {
-            Config.luaConfig = script
+            TodoApplication.config.luaConfig = script
             // Run the script and refilter
             runScript()
             broadcastTasklistChanged(TodoApplication.app.localBroadCastManager)
@@ -66,10 +66,11 @@ class ScriptConfigScreen : ThemedActionBarActivity() {
                 shareText(this, getString(R.string.lua_config_screen), script)
             }
             R.id.lua_config_import -> {
-                importLuaConfig(File(Config.todoFile.parent, "config.lua"))
+                val importFile = FileStore.sibling(TodoApplication.config.todoFileName, "config.lua")
+                importLuaConfig(importFile)
             }
             R.id.lua_config_export -> {
-                exportLuaConfig(File(Config.todoFile.parent, "config.lua"))
+                exportLuaConfig(FileStore.sibling(TodoApplication.config.todoFileName, "config.lue"))
             }
         }
         return true
@@ -84,11 +85,11 @@ class ScriptConfigScreen : ThemedActionBarActivity() {
         }
     }
 
-    private fun exportLuaConfig (exportFile: File) {
+    private fun exportLuaConfig (exportFile: String) {
         FileStoreActionQueue.add("Export Lua config") {
-            Config.luaConfig = script
+            TodoApplication.config.luaConfig = script
             try {
-                FileStore.writeFile(exportFile, Config.luaConfig)
+                FileStore.writeFile(exportFile, TodoApplication.config.luaConfig)
                 showToastShort(this, "Lua config exported")
             } catch (e: Exception) {
                 Log.e(TAG, "Export lua config failed", e)
@@ -98,10 +99,10 @@ class ScriptConfigScreen : ThemedActionBarActivity() {
 
     }
 
-    private fun importLuaConfig (importFile: File) {
+    private fun importLuaConfig (importFile: String) {
         FileStoreActionQueue.add("Import Lua config") {
             try {
-                FileStore.readFile(importFile.canonicalPath) { contents ->
+                FileStore.readFile(importFile) { contents ->
                     showToastShort(this, getString(R.string.toast_lua_config_imported))
                     runOnUiThread {
                         script = contents
@@ -109,8 +110,8 @@ class ScriptConfigScreen : ThemedActionBarActivity() {
                 }
 
             } catch (e: IOException) {
-                Log.e(TAG, "Import lua config, cant read file ${importFile.canonicalPath}", e)
-                showToastLong(this, "Error reading file ${importFile.canonicalPath}")
+                Log.e(TAG, "Import lua config, cant read file ${importFile}", e)
+                showToastLong(this, "Error reading file ${importFile}")
             }
         }
     }

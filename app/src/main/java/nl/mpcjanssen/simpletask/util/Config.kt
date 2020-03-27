@@ -1,5 +1,6 @@
 package nl.mpcjanssen.simpletask.util
 
+import android.content.Context
 import android.util.Log
 import me.smichel.android.KPreferences.Preferences
 import nl.mpcjanssen.simpletask.*
@@ -10,7 +11,7 @@ import java.io.File
 import java.io.IOException
 import java.util.*
 
-object Config : Preferences(TodoApplication.app) {
+class Config(app: TodoApplication) : Preferences(app) {
 
     val TAG = "Config"
 
@@ -195,31 +196,17 @@ object Config : Preferences(TodoApplication.app) {
 
     private var _todoFileName by StringOrNullPreference(R.string.todo_file_key)
     val todoFileName: String
-        get() {
-            var name = _todoFileName
-            if (name == null) {
-                name = FileStore.getDefaultPath()
-                setTodoFile(name)
-            }
-            val todoFile = File(name)
-            try {
-                return todoFile.canonicalPath
-            } catch (e: IOException) {
-                return FileStore.getDefaultPath()
-            }
+        get()  = _todoFileName ?: FileStore.getDefaultPath()
 
-        }
 
-    val todoFile: File
-        get() = File(todoFileName)
 
-    fun setTodoFile(todo: String) {
+    fun setTodoFile(todo: String?) {
         _todoFileName = todo
         prefs.edit().remove(getString(R.string.file_current_version_id)).apply()
     }
 
     val doneFileName: String
-        get() = File(todoFile.parentFile, "done.txt").absolutePath
+        get() = FileStore.doneFile(todoFileName)
 
     fun clearCache() {
         cachedContents = null
@@ -245,7 +232,7 @@ object Config : Preferences(TodoApplication.app) {
 
     val hasColorDueDates by BooleanPreference(R.string.color_due_date_key, true)
 
-    var cachedContents by StringOrNullPreference(R.string.cached_todo_file)
+    private var cachedContents by StringOrNullPreference(R.string.cached_todo_file)
 
     var todoList: List<Task>?
         get() = cachedContents?.let {
@@ -260,7 +247,7 @@ object Config : Preferences(TodoApplication.app) {
             if (items == null) {
                 prefs.edit().remove(getString(R.string.cached_todo_file)).apply()
             } else {
-                cachedContents = items.joinToString("\n") { it.inFileFormat() }
+                cachedContents = items.joinToString("\n") { it.inFileFormat(useUUIDs) }
             }
         }
     var changesPending by BooleanPreference(R.string.changes_pending, false)
@@ -319,8 +306,11 @@ object Config : Preferences(TodoApplication.app) {
         get() = Query(this.prefs, luaModule = "mainui")
         set(value) {
             // Update the intent so we wont get the old applyFilter after
-            // switching back to app later. Fixes [1c5271ee2e]
-            value.saveInPrefs(Config.prefs)
+            // switching back to app later. Fixes [1c5271ee2e
+            value.saveInPrefs(prefs)
+            TodoApplication.config.lastScrollPosition = -1
         }
+
+    val idleBeforeSaveSeconds by IntPreference(R.string.idle_before_save, 5)
 
 }

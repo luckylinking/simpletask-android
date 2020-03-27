@@ -6,7 +6,7 @@ import nl.mpcjanssen.simpletask.util.alfaSort
 import java.util.*
 import nl.mpcjanssen.simpletask.MyInterpreter
 
-class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createAsBackup: Boolean, moduleName: String? = null, taskGroup2By: String? = null) {
+class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createIsThreshold: Boolean, moduleName: String? = null, taskGroup2By: String? = null) {
     var comparator : Comparator<Task>? = null
 
     var fileOrder = true
@@ -66,14 +66,14 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                     }
                 }
                 "by_creation_date" -> comp = { it.createDate ?: lastDate }
-//                "in_future" -> comp = { it.inFuture(today) }
+//                "in_future" -> comp = { it.inFuture(today, createIsThreshold) }
                 "in_future" -> comp = { when (it.tags.isNullOrEmpty()) {    //     改为按有无标签排序
                     true -> "0"
                     false -> "1"
                 } }
                 "by_due_date" -> comp = { it.dueDate ?: lastDate }
 //                "by_threshold_date" -> comp = {
-//                    val fallback = if (createAsBackup) it.createDate ?: lastDate else lastDate
+//                    val fallback = if (createIsThreshold) it.createDate ?: lastDate else lastDate
 //                    it.thresholdDate ?: fallback
 //                }
                 "by_threshold_date" -> comp = { MyInterpreter.onSortCallback(it, taskGroup2By) }    //改为按中间分组排序

@@ -1,6 +1,7 @@
 package nl.mpcjanssen.simpletask.remote
 
 import nl.mpcjanssen.simpletask.TodoApplication
+import nl.mpcjanssen.simpletask.task.Task
 import nl.mpcjanssen.simpletask.util.broadcastFileSync
 import java.io.File
 import java.io.IOException
@@ -21,7 +22,7 @@ interface IFileStore {
 
     @Throws(IOException::class)
     fun loadTasksFromFile(path: String): RemoteContents
-    fun saveTasksToFile(path: String, lines: List<String>, eol: String)
+    fun saveTasksToFile(path: String, lines: List<String>, lastRemote: String?, eol: String) : String
 
     // Handle login and logout
     fun loginActivity(): KClass<*>?
@@ -31,7 +32,7 @@ interface IFileStore {
     fun appendTaskToFile(path: String, lines: List<String>, eol: String)
 
     fun readFile(file: String, fileRead: (String) -> Unit)
-    fun writeFile(file: File, contents: String)
+    fun writeFile(file: String, contents: String)
 
     val isOnline: Boolean
 
@@ -51,6 +52,17 @@ interface IFileStore {
     fun remoteTodoFileChanged() {
         broadcastFileSync(TodoApplication.app.localBroadCastManager)
 
+    }
+
+    fun doneFile(todoFileName: String): String {
+        return sibling(todoFileName, "done.txt")
+    }
+
+    fun parent(todoFileName: String): String {
+        return File(todoFileName).parent
+    }
+    fun sibling(todoFileName: String, name: String): String {
+        return File(parent(todoFileName), name).canonicalPath
     }
 
     // Generic special folder names for use in File dialogs

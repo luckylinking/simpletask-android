@@ -58,13 +58,16 @@ class TodoApplication : MultiDexApplication() {
     lateinit var localBroadCastManager: LocalBroadcastManager
     private lateinit var m_broadcastReceiver: BroadcastReceiver
 
+
     override fun onCreate() {
         super.onCreate()
         app = this
+        config = Config(app)
+        todoList = TodoList(config)
         db = Room.databaseBuilder(this,
                 AppDatabase::class.java, DB_FILE).fallbackToDestructiveMigration()
                 .build()
-        if (Config.forceEnglish) {
+        if (config.forceEnglish) {
             val conf = resources.configuration
             conf.locale = Locale.ENGLISH
             resources.updateConfiguration(conf, resources.displayMetrics)
@@ -101,7 +104,7 @@ class TodoApplication : MultiDexApplication() {
 
         localBroadCastManager.registerReceiver(m_broadcastReceiver, intentFilter)
         Log.i(TAG, "onCreate()")
-        Log.i(TAG, "Created todolist $TodoList")
+        Log.i(TAG, "Created todolist $todoList")
         Log.i(TAG, "Started ${appVersion(this)}")
         scheduleOnNewDay()
         scheduleRepeating()
@@ -160,13 +163,13 @@ class TodoApplication : MultiDexApplication() {
     }
 
     fun switchTodoFile(newTodo: String) {
-        Config.setTodoFile(newTodo)
+        config.setTodoFile(newTodo)
         loadTodoList("from file switch")
     }
 
     fun loadTodoList(reason: String) {
         Log.i(TAG, "Loading todolist")
-        TodoList.reload(reason = reason)
+        todoList.reload(reason = reason)
     }
 
     fun updateWidgets() {
@@ -191,6 +194,10 @@ class TodoApplication : MultiDexApplication() {
             return FileStore.isAuthenticated
         }
 
+    fun clearTodoFile() {
+        config.clearCache()
+        config.setTodoFile(null)
+    }
     fun startLogin(caller: Activity) {
         val loginActivity = FileStore.loginActivity()?.java
         loginActivity?.let {
@@ -204,30 +211,30 @@ class TodoApplication : MultiDexApplication() {
         FileDialog.browseForNewFile(
                 act,
                 fileStore,
-                Config.todoFile.parent,
+                fileStore.parent(config.todoFileName),
                 object : FileDialog.FileSelectedListener {
                     override fun fileSelected(file: String) {
                         switchTodoFile(file)
                     }
                 },
-                Config.showTxtOnly)
+                config.showTxtOnly)
     }
-
-
 
     companion object {
         private val TAG = TodoApplication::class.java.simpleName
         fun atLeastAPI(api: Int): Boolean = android.os.Build.VERSION.SDK_INT >= api
         lateinit var app : TodoApplication
+        lateinit var config : Config
+        lateinit var todoList: TodoList
         lateinit var db : AppDatabase
     }
-
     var today: String = todayAsString
 }
 
 
 object Backupper : BackupInterface {
     override fun backup(name: String, lines: List<String>) {
+        val start = SystemClock.elapsedRealtime()
         val now = Date().time
         val fileToBackup = TodoFile(lines.joinToString ("\n"), name, now)
         val dao =  TodoApplication.db.todoFileDao()
@@ -235,5 +242,7 @@ object Backupper : BackupInterface {
             dao.update(fileToBackup)
         }
         dao.removeBefore( now - 2 * 24 * 60 * 60 * 1000)
+        val end = SystemClock.elapsedRealtime()
+        Log.d(TAG, "Backing up of tasks took ${end - start} ms")
     }
 }

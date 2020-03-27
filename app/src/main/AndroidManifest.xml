@@ -99,7 +99,7 @@ You should have received a copy of the GNU General Public License along with Sim
             tools:ignore="MissingRegistered"
             android:name=".AddTaskBackground"
             android:enabled="true"
-            android:theme="@android:style/Theme.NoDisplay"
+            android:theme="@android:style/Theme.Translucent"
             android:exported="true"
             >
             <intent-filter>
@@ -107,6 +107,23 @@ You should have received a copy of the GNU General Public License along with Sim
                 <action android:name="nl.mpcjanssen.simpletask.BACKGROUND_TASK" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <action android:name="com.google.android.gm.action.AUTO_SEND" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- Implemented in Kotlin, so fix lint complaining about it -->
+        <activity
+                tools:ignore="MissingRegistered"
+                android:name=".AddLinkBackground"
+                android:enabled="true"
+                android:label="@string/share_link"
+                android:theme="@android:style/Theme.Translucent"
+                android:exported="true"
+        >
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="nl.mpcjanssen.simpletask.BACKGROUND_LINK" />
+                <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>

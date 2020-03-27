@@ -50,9 +50,9 @@ object FileStore : IFileStore {
         return RemoteContents(file.lastModified().toString(), lines)
     }
 
-    override fun writeFile(file: File, contents: String) {
-        Log.i(TAG, "Writing file to  ${file.canonicalPath}")
-        file.writeText(contents)
+    override fun writeFile(path: String, contents: String) {
+        Log.i(TAG, "Writing file to  $path")
+        File(path).writeText(contents)
     }
 
     override fun readFile(file: String, fileRead: (String) -> Unit) {
@@ -83,14 +83,14 @@ object FileStore : IFileStore {
         Log.i(TAG, "Observer: modifying done")
     }
 
-    override fun saveTasksToFile(path: String, lines: List<String>, eol: String) {
+    override fun saveTasksToFile(path: String, lines: List<String>, lastRemote: String?, eol: String) : String {
         Log.i(TAG, "Saving tasks to file: $path")
         val obs = observer
         obs?.ignoreEvents(true)
         val file = File(path)
         writeToFile(lines, eol, file, false)
         obs?.delayedStartListen(1000)
-        Config.lastSeenRemoteId = file.lastModified().toString()
+        return file.lastModified().toString()
     }
 
     override fun appendTaskToFile(path: String, lines: List<String>, eol: String) {
@@ -109,6 +109,9 @@ object FileStore : IFileStore {
     override fun loadFileList(path: String, txtOnly: Boolean): List<FileEntry> {
         val result = ArrayList<FileEntry>()
         val file = File(path)
+        if (path == "/") {
+            result.add(FileEntry(Environment.getExternalStorageDirectory().path, true))
+        }
 
         val filter = FilenameFilter { dir, filename ->
             val sel = File(dir, filename)
