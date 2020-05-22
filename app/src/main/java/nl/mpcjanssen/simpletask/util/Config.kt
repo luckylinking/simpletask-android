@@ -8,7 +8,7 @@ import nl.mpcjanssen.simpletask.remote.FileStore
 import nl.mpcjanssen.simpletask.task.Task
 import org.json.JSONObject
 import java.io.File
-import java.io.IOException
+
 import java.util.*
 
 class Config(app: TodoApplication) : Preferences(app) {
@@ -157,13 +157,9 @@ class Config(app: TodoApplication) : Preferences(app) {
     @Suppress("unused")
     var fullDropBoxAccess by BooleanPreference(R.string.dropbox_full_access, true)
 
-    private val dateBarSize by IntPreference(R.string.datebar_relative_size, 65)
+    private val dateBarSize by IntPreference(R.string.datebar_relative_size, 80)
     val dateBarRelativeSize: Float
         get() = dateBarSize / 100.0f
-
-    private val headerSize by IntPreference(R.string.header_relative_size, 80)
-    val headerRelativeSize: Float
-        get() = headerSize / 100.0f
 
     val showCalendar by BooleanPreference(R.string.ui_show_calendarview, false)
 
@@ -195,18 +191,18 @@ class Config(app: TodoApplication) : Preferences(app) {
         get() = TodoApplication.app.resources.getStringArray(R.array.sortKeys)
 
     private var _todoFileName by StringOrNullPreference(R.string.todo_file_key)
-    val todoFileName: String
-        get()  = _todoFileName ?: FileStore.getDefaultPath()
+    val todoFile: File
+        get()  = _todoFileName?.let { File(it )} ?: FileStore.getDefaultFile()
 
 
 
-    fun setTodoFile(todo: String?) {
-        _todoFileName = todo
+    fun setTodoFile(file: File?) {
+        _todoFileName = file?.path
         prefs.edit().remove(getString(R.string.file_current_version_id)).apply()
     }
 
-    val doneFileName: String
-        get() = FileStore.doneFile(todoFileName)
+    val doneFile: File
+        get() = File(todoFile.parentFile, "done.txt")
 
     fun clearCache() {
         cachedContents = null
@@ -243,7 +239,7 @@ class Config(app: TodoApplication) : Preferences(app) {
             }
         }
         set(items) {
-            Log.i(TAG, "Updating todoList cache with ${items?.size} items")
+            Log.i(TAG, "Updating todoList cache with ${items?.size} tasks")
             if (items == null) {
                 prefs.edit().remove(getString(R.string.cached_todo_file)).apply()
             } else {

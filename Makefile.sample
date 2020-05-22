@@ -1,0 +1,18 @@
+.PHONY: artifacts assemble upload publish version
+
+GRADLE:=gradlew
+GITNAME=$(shell ${GRADLE} app:androidGitVersionName --quiet)
+artifacts: assemble upload
+
+assemble:
+	${GRADLE} clean assembleNextcloud assembleDokuwiki assembleCloudless assembleDropbox assembleWebdav
+
+version:
+    ${GRADLE} androidGitVersion
+
+upload: version
+	(cd app/build/outputs && scp -r apk ssh.mpcjanssen.nl:/srv/www/mpcjanssen/public/artifacts/${GITNAME})
+
+
+publish:
+    ${GRADLE} clean publishDropboxRelease publishCloudlessRelease publishDropboxRelease publishNextcloudRelease

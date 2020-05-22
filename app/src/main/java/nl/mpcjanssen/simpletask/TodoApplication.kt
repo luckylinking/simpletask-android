@@ -31,6 +31,7 @@ package nl.mpcjanssen.simpletask
 
 import android.app.Activity
 import android.app.AlarmManager
+import android.app.Application
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.*
@@ -52,7 +53,7 @@ import nl.mpcjanssen.simpletask.util.*
 import java.io.File
 import java.util.*
 
-class TodoApplication : MultiDexApplication() {
+class TodoApplication : Application() {
 
     private lateinit var androidUncaughtExceptionHandler: Thread.UncaughtExceptionHandler
     lateinit var localBroadCastManager: LocalBroadcastManager
@@ -162,7 +163,7 @@ class TodoApplication : MultiDexApplication() {
         super.onTerminate()
     }
 
-    fun switchTodoFile(newTodo: String) {
+    fun switchTodoFile(newTodo: File) {
         config.setTodoFile(newTodo)
         loadTodoList("from file switch")
     }
@@ -211,9 +212,9 @@ class TodoApplication : MultiDexApplication() {
         FileDialog.browseForNewFile(
                 act,
                 fileStore,
-                fileStore.parent(config.todoFileName),
+                config.todoFile.parentFile,
                 object : FileDialog.FileSelectedListener {
-                    override fun fileSelected(file: String) {
+                    override fun fileSelected(file: File) {
                         switchTodoFile(file)
                     }
                 },
@@ -233,10 +234,10 @@ class TodoApplication : MultiDexApplication() {
 
 
 object Backupper : BackupInterface {
-    override fun backup(name: String, lines: List<String>) {
+    override fun backup(file: File, lines: List<String>) {
         val start = SystemClock.elapsedRealtime()
         val now = Date().time
-        val fileToBackup = TodoFile(lines.joinToString ("\n"), name, now)
+        val fileToBackup = TodoFile(lines.joinToString ("\n"), file.canonicalPath, now)
         val dao =  TodoApplication.db.todoFileDao()
         if(dao.insert(fileToBackup) == -1L) {
             dao.update(fileToBackup)

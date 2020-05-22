@@ -48,17 +48,17 @@ To open Simpletask with a specific filter you can use the intent:
 <tr class="odd">
 <td align="left">CONTEXTS</td>
 <td align="left">String</td>
-<td align="left">list of lists in filter separated by 'n' or ','</td>
+<td align="left">list of lists in filter separated by '\n'</td>
 </tr>
 <tr class="even">
 <td align="left">PROJECTS</td>
 <td align="left">String</td>
-<td align="left">list of tags in filter separated by 'n' or ','</td>
+<td align="left">list of tags in filter separated by '\n'</td>
 </tr>
 <tr class="odd">
 <td align="left">PRIORITIES</td>
 <td align="left">String</td>
-<td align="left">list of priorities in filter separated by 'n' or ',</td>
+<td align="left">list of priorities in filter separated by '\n'</td>
 </tr>
 <tr class="even">
 <td align="left">CONTEXTSnot</td>
@@ -104,7 +104,7 @@ SORTS contains a comma or '' separated list of sort keys and their direction wit
 
 #### Sort keys
 
-See list in [arrays.xml](https://github.com/mpcjanssen/simpletask-android/blob/master/src/main/res/values/donottranslate.xml#L42-51) `??? Link is broken`
+See list [here](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/res/values/donottranslate.xml#L45-59)
 
 #### Example
 

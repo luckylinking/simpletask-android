@@ -122,7 +122,6 @@ class FilterActivity : ThemedNoActionBarActivity() {
             putBoolean(Query.INTENT_HIDE_CREATE_DATE_FILTER, mFilter.hideCreateDate)
             putBoolean(Query.INTENT_HIDE_HIDDEN_FILTER, mFilter.hideHidden)
             putBoolean(Query.INTENT_CREATE_AS_THRESHOLD, mFilter.createIsThreshold)
-            putString(Query.INTENT_TASKGROUP2_KEY,mFilter.taskGroup2By)
             putString(TAB_TYPE, OTHER_TAB)
         }
         pagerAdapter!!.add(otherTab)
@@ -208,7 +207,7 @@ class FilterActivity : ThemedNoActionBarActivity() {
     private fun openScript(file_read: (String) -> Unit) {
             val dialog = FileDialog()
         dialog.addFileListener(object : FileDialog.FileSelectedListener {
-                override fun fileSelected(file: String) {
+                override fun fileSelected(file: File) {
                     Thread(Runnable {
                         try {
                             FileStore.readFile(file, file_read)
@@ -219,7 +218,7 @@ class FilterActivity : ThemedNoActionBarActivity() {
                     }).start()
                 }
             })
-            dialog.createFileDialog(this@FilterActivity, FileStore, File(TodoApplication.config.todoFileName).parent, txtOnly = false)
+            dialog.createFileDialog(this@FilterActivity, FileStore, TodoApplication.config.todoFile.parentFile, txtOnly = false)
     }
 
     private fun createFilterIntent(): Intent {
@@ -246,7 +245,6 @@ class FilterActivity : ThemedNoActionBarActivity() {
                     mFilter.hideCreateDate = of.hideCreateDate
                     mFilter.hideHidden = of.hideHidden
                     mFilter.createIsThreshold = of.createAsThreshold
-                    mFilter.taskGroup2By = of.taskGroup2By
                 }
                 CONTEXT_TAB -> {
                     val lf = f as FilterListFragment

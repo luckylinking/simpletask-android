@@ -48,17 +48,17 @@ Um Simpletask mit einem bestimmten Filter zu öffnen, kann folgender Intent genu
 <tr class="odd">
 <td align="left">CONTEXTS</td>
 <td align="left">String</td>
-<td align="left">filtert nach einer Liste von Listen, Trennzeichen 'n' oder ','</td>
+<td align="left">filtert nach einer Liste von Listen, Trennzeichen '\n'</td>
 </tr>
 <tr class="even">
 <td align="left">PROJECTS</td>
 <td align="left">String</td>
-<td align="left">filtert nach einer Liste von Tags, Trennzeichen 'n' oder ','</td>
+<td align="left">filtert nach einer Liste von Tags, Trennzeichen '\n'</td>
 </tr>
 <tr class="odd">
 <td align="left">PRIORITIES</td>
 <td align="left">String</td>
-<td align="left">filtert nach einer Liste von Prioritäten, Trennzeichen 'n' oder ','</td>
+<td align="left">filtert nach einer Liste von Prioritäten, Trennzeichen '\n'</td>
 </tr>
 <tr class="even">
 <td align="left">CONTEXTSnot</td>
@@ -104,8 +104,7 @@ SORTS enthält eine mit Kommas oder '' getrennte Liste von Sortierschlüsseln un
 
 #### Sortierschlüssel
 
-Siehe Liste in [arrays.xml](https://github.com/mpcjanssen/simpletask-android/blob/master/src/main/res/values/donottranslate.xml#L42-51) `??? Link funktioniert nicht`
-
+Siehe Liste in [hier](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/res/values/donottranslate.xml#L45-59)
 #### Beispiel
 
 - Die Sortierung `+!completed,+!alphabetical` sortiert abgeschlossene Aufgaben ans Ende und dann alphabetisch.

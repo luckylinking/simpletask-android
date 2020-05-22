@@ -317,24 +317,6 @@ class Task(text: String, defaultPrependedDate: String? = null) {
         return text
     }
 
-    fun deferReviewDate(deferString: String, deferFromDate: String) {
-        if (MATCH_SINGLE_DATE.reset(deferString).matches()) {
-            reviewDate = deferString
-            return
-        }
-        if (deferString == "") {
-            reviewDate = null
-            return
-        }
-        val olddate: String? = if (deferFromDate.isEmpty()) {
-            reviewDate
-        } else {
-            deferFromDate
-        }
-        val newDate = addInterval(olddate, deferString)
-        reviewDate = newDate?.format(DATE_FORMAT)
-    }
-
     fun inFuture(today: String, createIsThreshold: Boolean): Boolean {
         val date = thresholdDate ?: if (createIsThreshold) createDate else null
         date?.let {
@@ -610,15 +592,12 @@ class Task(text: String, defaultPrependedDate: String? = null) {
                             return@forEach
                         }
                     }
-
                     if (lexeme.isBlank()) {
                         tokens.add(WhiteSpaceToken(lexeme))
                     } else {
                         tokens.add(TextToken(lexeme))
                     }
-
                 }
-
                 return tokens
             }
         }

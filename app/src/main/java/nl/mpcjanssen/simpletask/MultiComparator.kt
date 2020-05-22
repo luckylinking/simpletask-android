@@ -6,7 +6,7 @@ import nl.mpcjanssen.simpletask.util.alfaSort
 import java.util.*
 import nl.mpcjanssen.simpletask.MyInterpreter
 
-class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createIsThreshold: Boolean, moduleName: String? = null, taskGroup2By: String? = null) {
+class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createIsThreshold: Boolean, moduleName: String? = null) {
     var comparator : Comparator<Task>? = null
 
     var fileOrder = true
