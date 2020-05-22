@@ -822,7 +822,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                         startMonth++
                         val date = DateTime.forDateOnly(year, startMonth, day)
                         MyInterpreter.originDate = date.format(Constants.DATE_FORMAT)
-                        TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
+                        TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFile, true)
                     },
                         today.year!!,
                         today.month!! - 1,
@@ -835,7 +835,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                 } else {
 
                     MyInterpreter.originDate = input
-                    TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFileName, true)
+                    TodoApplication.todoList.notifyTasklistChanged(TodoApplication.config.todoFile, true)
                 }
 
             }

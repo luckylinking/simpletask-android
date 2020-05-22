@@ -224,9 +224,9 @@ object MyInterpreter {
 //            if (f.tags?.sorted()?.firstOrNull() == null) {}
     }
 
-    fun onSortCallback(f: Task,taskGroup2By: String? = null): String {
+    fun onSortCallback(f: Task): String {
 
-        val comps = onGroupCallback(f, taskGroup2By)
+        val comps = onGroupCallback(f)
         val comp3 = comps[3]?.sort?:"1970-01-01"
         val comp4 = comps[4]?.sort?:"_"
         val comp5 = comps[5]?.title?:"1970-01-01"
@@ -245,7 +245,7 @@ object MyInterpreter {
         val center: Boolean? = null
     )
 
-    fun onGroupCallback(f: Task, taskGroup2By: String? = null): ArrayList<Group?> {
+    fun onGroupCallback(f: Task): ArrayList<Group?> {
         val result = ArrayList<Group?>(9)
         val nowTime = hourMinuteNow()
         val today = originDate?: TodoApplication.app.today

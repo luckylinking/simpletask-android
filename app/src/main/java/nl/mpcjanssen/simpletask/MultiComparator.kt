@@ -74,7 +74,7 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
 //                    val fallback = if (createIsThreshold) it.createDate ?: lastDate else lastDate
 //                    it.thresholdDate ?: fallback
 //                }
-                "by_threshold_date" -> comp = { MyInterpreter.onSortCallback(it, taskGroup2By) }    //改为按中间分组排序
+                "by_threshold_date" -> comp = { MyInterpreter.onSortCallback(it) }    //改为按中间分组排序
                 "by_completion_date" -> comp = { it.completionDate ?: lastDate }
                 "by_lua" -> comp = {                                                                //改为按主分组排序
                     val group = MyInterpreter.firstGrouping(it)

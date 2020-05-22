@@ -310,6 +310,24 @@ class Task(text: String, defaultPrependedDate: String? = null) {
         dueDate = deferDate(deferString, oldDate)
     }
 
+    fun deferReviewDate(deferString: String, deferFromDate: String) {
+        if (MATCH_SINGLE_DATE.reset(deferString).matches()) {
+            reviewDate = deferString
+            return
+        }
+        if (deferString == "") {
+            reviewDate = null
+            return
+        }
+        val olddate: String? = if (deferFromDate.isEmpty()) {
+            reviewDate
+        } else {
+            deferFromDate
+        }
+        val newDate = addInterval(olddate, deferString)
+        reviewDate = newDate?.format(DATE_FORMAT)
+    }
+
     fun inFileFormat(useUUIDs: Boolean) : String {
         if (useUUIDs && text.isNotBlank() && uuid == null) {
             uuid = UUID.randomUUID().toString()

@@ -29,7 +29,7 @@
         xmlns:robobunny="http://robobunny.com"
         android:dependency="@string/custom_font_size"
         android:key="@string/font_size"
-        android:defaultValue="20"
+        android:defaultValue="16"
         android:max="36"
         robobunny:min="12"
         robobunny:interval="2"

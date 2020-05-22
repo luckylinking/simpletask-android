@@ -157,9 +157,14 @@ class Config(app: TodoApplication) : Preferences(app) {
     @Suppress("unused")
     var fullDropBoxAccess by BooleanPreference(R.string.dropbox_full_access, true)
 
-    private val dateBarSize by IntPreference(R.string.datebar_relative_size, 80)
+    private val dateBarSize by IntPreference(R.string.datebar_relative_size, 65)
     val dateBarRelativeSize: Float
         get() = dateBarSize / 100.0f
+
+    private val headerSize by IntPreference(R.string.header_relative_size, 80)
+    val headerRelativeSize: Float
+        get() = headerSize / 100.0f
+
 
     val showCalendar by BooleanPreference(R.string.ui_show_calendarview, false)
 
@@ -171,9 +176,9 @@ class Config(app: TodoApplication) : Preferences(app) {
             }
             val customSize by BooleanPreference(R.string.custom_font_size, false)
             if (!customSize) {
-                return 20.0f
+                return 16.0f
             }
-            val fontSize by IntPreference(R.string.font_size, 20)
+            val fontSize by IntPreference(R.string.font_size, 16)
             return fontSize.toFloat()
         }
 

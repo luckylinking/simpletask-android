@@ -153,7 +153,7 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
 
 
     for (item in visibleTasks) {
-        var newHeader = MyInterpreter.onGroupCallback(item, taskGroup2by)
+        var newHeader = MyInterpreter.onGroupCallback(item)
 //        newHeader.add(item.getHeader(firstSort, no_header, createIsThreshold))
         val n = newHeader.size
 
