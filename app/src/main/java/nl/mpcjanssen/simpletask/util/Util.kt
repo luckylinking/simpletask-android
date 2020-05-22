@@ -145,10 +145,12 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
 //    val firstSort = sorts[firstGroupSortIndex]
 
     val result = ArrayList<VisibleLine>()
+    val today = TodoApplication.app.today
 
     var header = ArrayList<String?>()
     var count = ArrayList<Int>()
     var headerLines = ArrayList<HeaderLine?>()
+
 
     for (item in visibleTasks) {
         var newHeader = MyInterpreter.onGroupCallback(item, taskGroup2by)
@@ -159,26 +161,31 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
         while(count.size < n) count.add(0)
         while(headerLines.size < n) headerLines.add(null)
 
-        for(i in 1 until n) {
-            if (header[i] != newHeader[i]) {
+        for(i in 0 until n) {
+            if (header[i] != newHeader[i]?.title) {
+                result.add(HeaderLine("", showCount = false))
+                if (i == 0) result.add(HeaderLine("━━━━━━━━━━━━━━━━━━━━━━",null,
+                    showCount = false,
+                    center = true,
+                    relTextSize = 1f
+                ))
                 for(j in i until n) {
-                    if(headerLines[j] != null) {
+                    if(headerLines[j]?.showCount == true) {
                         headerLines[j]!!.title += "（${count[j]}）"
                     }
                     if(newHeader[j] != null) {
-                        headerLines[j] = HeaderLine(newHeader[j]?:"", j)
-                        if (i == j) result.add(HeaderLine("", j))
+                        headerLines[j] = HeaderLine(newHeader[j]?.title?:"", newHeader[j]?.color, newHeader[j]?.showCount, newHeader[j]?.center, newHeader[j]?.relTextSize)
                         result.add(headerLines[j]!!)
                     } else {
                         headerLines[j] = null
                     }
                     count[j] = 0
-                    header[j] = newHeader[j]
+                    header[j] = newHeader[j]?.title
                 }
                 break
             }
         }
-        for(i in 1 until n) {
+        for(i in 0 until n) {
             count[i]++
         }
 
@@ -187,7 +194,7 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
     }
     // Add count to last header
     for ((i,e) in headerLines.withIndex()){
-        if(e != null) {
+        if(e?.showCount == true) {
             e.title += "（${count[i]}）"
         }
     }
@@ -196,11 +203,23 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
     if (result.size > 0 && result[0].header && result[0].title.isNullOrEmpty()) {
         result.removeAt(0)
     }
+
     // Clean up possible last empty list header that should be hidden
-    val i = result.size
-    if (i > 0 && result[i - 1].header) {
-        result.removeAt(i - 1)
-    }
+//    val i = result.size
+//    if (i > 0 && result[i - 1].header) {
+//        result.removeAt(i - 1)
+//    }
+
+    // Add Bottom Header
+    result.add(HeaderLine("", showCount = false))
+    result.add(HeaderLine("━━━━━━━━━━━━━━━━━━━━━━",
+        showCount = false,
+        center = true,
+        relTextSize = 1f
+    ))
+
+    // remove First Header
+    if (result.size > 0 && result[0].header) result.removeAt(0)
 
     return result
 }

@@ -36,7 +36,8 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                     break@label
                 }
                 "by_context" -> comp = { t ->
-                    val txt = t.lists?.let { alfaSort(it).firstOrNull() } ?: ""
+//                    val txt = t.lists?.let { alfaSort(it).firstOrNull() } ?: ""
+                    val txt = (t.lists ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
                     if (caseSensitve) {
                         txt
                     } else {
@@ -44,7 +45,8 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                     }
                 }
                 "by_project" -> comp = { t ->
-                    val txt = t.tags?.let { alfaSort(it).firstOrNull() } ?: ""
+//                    val txt = t.tags?.let { alfaSort(it).firstOrNull() } ?: ""
+                    val txt = (t.tags ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
                     if (caseSensitve) {
                         txt
                     } else {
@@ -59,11 +61,7 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                 "by_prio" -> comp = { it.priority }
 //                "completed" -> comp = { it.isCompleted() }
                 "completed" -> comp = {                 //改为按创建或完成时间排序
-                    when (MyInterpreter.group1(it)) {
-                        Groups.INBOX -> it.createDate ?: "1970-01-01"
-                        Groups.COMPLETED -> it.completionDate ?: "1970-01-01"
-                        else -> "1970-01-01"
-                    }
+                    if (MyInterpreter.group1(it)?.showCompleteOrCreate == true) it.completionDate ?: it.createDate ?: "1970-01-01" else "1970-01-01"
                 }
                 "by_creation_date" -> comp = { it.createDate ?: lastDate }
 //                "in_future" -> comp = { it.inFuture(today, createIsThreshold) }
@@ -78,7 +76,10 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
 //                }
                 "by_threshold_date" -> comp = { MyInterpreter.onSortCallback(it, taskGroup2By) }    //改为按中间分组排序
                 "by_completion_date" -> comp = { it.completionDate ?: lastDate }
-                "by_lua" -> comp = { MyInterpreter.firstGrouping(it).sort }         //改为按主分组排序
+                "by_lua" -> comp = {                                                                //改为按主分组排序
+                    val group = MyInterpreter.firstGrouping(it)
+                    group.ordinal.toString() + if (it.isSchedule()) "1" else if (group.invertIsScheduleSort) "2" else "0"
+                }
 
                 else -> {
                     Log.w("MultiComparator", "Unknown sort: $sort")

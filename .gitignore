@@ -2,9 +2,9 @@ dropbox.xml*
 toodledo.xml
 dropbox-folder.xml*
 build/
+cloudless/
 google-key
 local.properties
-gradle.properties
 .gradle/
 tags
 .repo

@@ -584,10 +584,7 @@ class Simpletask : ThemedNoActionBarActivity() {
                         title = TodoApplication.config.todoFileName.replace("([^/])[^/]*/".toRegex(), "$1/")
                     } else {
                         title =
-                            if (MyInterpreter.originDate?:TodoApplication.app.today == TodoApplication.app.today)
-                                "今日"
-                            else
-                                MyInterpreter.originDate?:TodoApplication.app.today
+                            MyInterpreter.relativeDate(MyInterpreter.originDate?:TodoApplication.app.today)
                     }
                     toggle.isDrawerIndicatorEnabled = true
                     fab.visibility = View.VISIBLE

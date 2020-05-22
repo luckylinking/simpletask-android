@@ -30,12 +30,14 @@ enum class Priority {
 
     A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
     NONE {
-        override val code: String = "~"
+        override val code: String = "-"
         override val fileFormat: String = ""
+        override val display: String = "无"
     };
 
     open val code: String = name
     open val fileFormat: String = "($name)"
+    open val display: String = "$name "
 
     companion object {
 

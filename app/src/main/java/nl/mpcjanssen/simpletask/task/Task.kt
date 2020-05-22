@@ -356,9 +356,14 @@ class Task(text: String, defaultPrependedDate: String? = null) {
     }
 
     fun isDaily(): Boolean {
-        val rec = recurrencePattern ?: return false
-        if (rec == "1d" || rec == "+1d" ||rec == "1b" || rec == "+1b") return true
-        return  false
+        return when (recurrencePattern) {
+            "1d", "+1d", "1b", "+1b" -> return true
+            else -> false
+        }
+    }
+
+    fun isSchedule(): Boolean {
+        return deferTime ?: beginTime != null
     }
 
     fun isCompleted(): Boolean {

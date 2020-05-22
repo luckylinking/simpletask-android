@@ -70,35 +70,10 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         val txt = line.title?:""
         val ss = SpannableString(txt)
 
-        val headerColor: Int
-        headerColor = when (line.level) {
-            2 -> ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_dark)
-            1,6 -> ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_light)
-            5 -> ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark)
-            3,4 -> ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light)
-            8 -> ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light)
-            else -> ContextCompat.getColor(TodoApplication.app, R.color.gray67)
-        }
-
-        setColor(ss, headerColor)
-
-//        if (txt.contains("过期")) {
-//            setColor(ss, ContextCompat.getColor(TodoApplication.app, R.color.simple_red_dark),"过期")
-//        }
-//        if (txt.contains("到期")) {
-//            setColor(ss, ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_dark),"到期")
-//        }
-//        if (txt.contains("限期")) {
-//            setColor(ss, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark),"限期")
-//        }
-
-        t.gravity = when (line.level) {
-            2,4,5,8 -> Gravity.START
-            else -> Gravity.CENTER
-        }
-
+        setColor(ss, line.color?: ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_light))
         t.text = ss
-        t.textSize = textSize * TodoApplication.config.headerRelativeSize
+        t.textSize = textSize * (line.relTextSize?: TodoApplication.config.headerRelativeSize)
+        t.gravity = if (line.center==true) Gravity.CENTER else Gravity.START
     }
 
     private fun bindTask (holder : TaskViewHolder, position: Int) {
@@ -116,10 +91,9 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         val taskRec = view.taskrec
         val taskTimeDefer = view.timedefer
 
-        val showTimeAndLists = when (MyInterpreter.firstGrouping(task)) {
-            Groups.DAILY_NOW,Groups.CRITICAL_TODAY,Groups.TODO_TODAY,Groups.DAILY_TODAY,Groups.NEAR_FUTURE_DAILY -> false
-            else -> true
-        }
+        val group = MyInterpreter.firstGrouping(task)
+        val showBeginTime = !group.showSchedule
+        val showLists = !group.showLists
 
         if (TodoApplication.config.showCompleteCheckbox) {
             view.checkBox.visibility = View.VISIBLE
@@ -140,7 +114,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
                 is CompletedDateToken -> !TodoApplication.config.hasExtendedTaskView
                 is DueDateToken -> !TodoApplication.config.hasExtendedTaskView
                 is ThresholdDateToken -> !TodoApplication.config.hasExtendedTaskView
-                is ListToken -> !query.hideLists || showTimeAndLists
+                is ListToken -> !query.hideLists || showLists
                 is TagToken -> !query.hideTags
                 is ReviewDateToken -> false
                 is DeferToken -> false
@@ -272,7 +246,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
             taskThreshold.visibility = View.GONE
         }
 
-        if (!txtBegin.isNullOrEmpty() && showTimeAndLists) {
+        if (!txtBegin.isNullOrEmpty() && showBeginTime) {
             taskBegin.text = txtBegin
             taskBegin.visibility = View.VISIBLE
         } else {
