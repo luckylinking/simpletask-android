@@ -22,3 +22,7 @@ Thumbs.db
 captures/
 .DS_Store
 Makefile
+BC4Key.txt
+*.log
+*.apk
+output.json
