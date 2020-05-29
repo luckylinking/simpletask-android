@@ -201,35 +201,32 @@ object MyInterpreter {
     fun group2(f: Task, now: String, today: String): MainGroup {
 
         val thresholdDate = f.deferDate ?: f.thresholdDate
-        val dueDate = f.dueDate?:"9999-99-99"
+        val dueDate = f.dueDate
         val endTime = f.endTime
         val priority = f.priority
         val noSchedule = !f.isSchedule()
 
-        if (thresholdDate?.let{it < today} == true)
+        if (thresholdDate?.let{it <= today} == true)
             return when {
-                dueDate <= today || endTime != null     ->      MainGroup.CRITICAL
+                (thresholdDate == today) && (f.deferTime?:f.beginTime)?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 1 } == true
+                                                        ->      MainGroup.REVIEW
+                endTime != null                         ->      MainGroup.CRITICAL
+                dueDate?:"9999-12-31" <= today          ->      MainGroup.CRITICAL
                 priority == Priority.A                  ->      MainGroup.IMPORTANT
-                priority != Priority.NONE && noSchedule ->      MainGroup.REVIEW_HIDE_THRESHOLD
-                else                                    ->      MainGroup.TODO
-            }
-
-        if (thresholdDate == today)
-            return when {
-                (f.deferTime?:f.beginTime)?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 1 }
-                        == true                         ->      MainGroup.REVIEW
-                dueDate <= today || endTime != null     ->      MainGroup.CRITICAL
-                priority == Priority.A                  ->      MainGroup.IMPORTANT
-                priority != Priority.NONE && noSchedule ->      MainGroup.REVIEW_HIDE_THRESHOLD
+                noSchedule && priority != Priority.NONE ->      MainGroup.REVIEW_HIDE_THRESHOLD
                 else                                    ->      MainGroup.TODO
             }
 
         val reviewDate = f.reviewDate
-        if (reviewDate?.let{it <= today} == true) return if (thresholdDate == null) MainGroup.REVIEW_HIDE_THRESHOLD else MainGroup.REVIEW
-
-        val relThreshold = daysBetween(thresholdDate, today)    //无启动日期者按1970-01-01
-        val relDue = daysBetween(dueDate, today)
-        return if (reviewDate == null && (relThreshold < 11 || relDue < 16)) MainGroup.REVIEW else MainGroup.FUTURE
+        return when {
+            reviewDate?.let{it > today} == true         ->      MainGroup.FUTURE
+            thresholdDate == null                       ->      MainGroup.REVIEW_HIDE_THRESHOLD
+            reviewDate != null                          ->      MainGroup.REVIEW
+            daysBetween(thresholdDate, today) < 11      ->      MainGroup.REVIEW
+            dueDate != null && daysBetween(dueDate, today) < 16
+                                                        ->      MainGroup.REVIEW
+            else                                        ->      MainGroup.FUTURE
+        }
 //            if (f.tags?.sorted()?.firstOrNull() == null) {}
     }
 
