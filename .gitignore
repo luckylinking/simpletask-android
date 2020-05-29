@@ -23,6 +23,7 @@ captures/
 .DS_Store
 Makefile
 BC4Key.txt
+版本控制方案.txt
 *.log
 *.apk
 output.json

@@ -1,7 +1,6 @@
 package nl.mpcjanssen.simpletask
 
 
-import android.view.Gravity
 import nl.mpcjanssen.simpletask.task.Task
 import nl.mpcjanssen.simpletask.util.addInterval
 import java.text.SimpleDateFormat
@@ -16,19 +15,20 @@ enum class MainGroup {
     INBOX{
         override val title: String = "便签"
         override val showCompleteOrCreate: Boolean = true
+        override val showSchedule: Boolean = false
         override val isScheduleGrouping: Boolean = false
     },
 
     TOP{
         override val title: String = "置顶"
         override val showTags: Boolean = true
+        override val showSchedule: Boolean = false
         override val isScheduleGrouping: Boolean = false
     },
 
     CRITICAL{
         override val title: String = "限时"
         override val showThreshold: Boolean = true
-        override val showSchedule: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_red_dark)
@@ -37,7 +37,6 @@ enum class MainGroup {
     IMPORTANT{
         override val title: String = "重要"
         override val showPriority: Boolean = true
-        override val showSchedule: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
@@ -47,17 +46,23 @@ enum class MainGroup {
     TODO{
         override val title: String = "待办"
         override val showPriority: Boolean = true
-        override val showSchedule: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
 
     },
 
+    REVIEW_HIDE_THRESHOLD{
+        override val title: String = "查看"
+        override val showPriority: Boolean = true
+        override val showTags: Boolean = true
+        override val showLists: Boolean = true
+    },
+
     REVIEW{
         override val title: String = "查看"
+        override val showPriority: Boolean = true
         override val showThreshold: Boolean = true
-        override val showSchedule: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
     },
@@ -65,31 +70,32 @@ enum class MainGroup {
     COMPLETED{
         override val title: String = "完成"
         override val showCompleteOrCreate: Boolean = true
+        override val showSchedule: Boolean = false
         override val showTags: Boolean = true
     },
 
     FUTURE{
         override val title: String = "将来"
+        override val showPriority: Boolean = true
         override val showThreshold: Boolean = true
         override val showReview: Boolean = true
-        override val showSchedule: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
     },
 
     ;
 
-    open val title: String = ""
-    open val showCompleteOrCreate: Boolean = false
-    open val showThreshold: Boolean = false
-    open val showPriority: Boolean = false
-    open val showReview: Boolean = false
-    open val showSchedule: Boolean = false
-    open val showTags: Boolean = false
-    open val showLists: Boolean = false
-    open val isScheduleGrouping: Boolean = true
-    open val invertIsScheduleSort: Boolean = false
-    open val color: Int? = null
+    open val title: String = ""                             //标题文字
+    open val showCompleteOrCreate: Boolean = false          //显示完成或创建日期（无者显示“1970-01-01”）
+    open val showPriority: Boolean = false                  //在无启动日期显示的前提下显示优先级
+    open val showReview: Boolean = false                    //显示回顾日期（无者不显示）
+    open val showSchedule: Boolean = true                   //显示任务时间（无任务时间者如需要显示启动日期则在任务时间栏显示"--:--"，其余不显示）
+    open val showThreshold: Boolean = false                 //没有启动时间的任务显示启动日期且任务时间显示"--:--"（有任务时间且要求显示者自动显示启动日期）（无者不显示）
+    open val showTags: Boolean = false                      //显示标签（无者显示“~”）
+    open val showLists: Boolean = false                     //显示清单（无者不显示）
+    open val isScheduleGrouping: Boolean = true             //按“日程”和“事项”分组
+    open val invertIsScheduleSort: Boolean = false          //是否将“日程”放到“事项”之前
+    open val color: Int? = null                             //标题颜色
 }
 
 
@@ -198,11 +204,13 @@ object MyInterpreter {
         val dueDate = f.dueDate?:"9999-99-99"
         val endTime = f.endTime
         val priority = f.priority
+        val noSchedule = !f.isSchedule()
 
         if (thresholdDate?.let{it < today} == true)
             return when {
                 dueDate <= today || endTime != null     ->      MainGroup.CRITICAL
                 priority == Priority.A                  ->      MainGroup.IMPORTANT
+                priority != Priority.NONE && noSchedule ->      MainGroup.REVIEW_HIDE_THRESHOLD
                 else                                    ->      MainGroup.TODO
             }
 
@@ -212,11 +220,12 @@ object MyInterpreter {
                         == true                         ->      MainGroup.REVIEW
                 dueDate <= today || endTime != null     ->      MainGroup.CRITICAL
                 priority == Priority.A                  ->      MainGroup.IMPORTANT
+                priority != Priority.NONE && noSchedule ->      MainGroup.REVIEW_HIDE_THRESHOLD
                 else                                    ->      MainGroup.TODO
             }
 
         val reviewDate = f.reviewDate
-        if (reviewDate?.let{it <= today} == true) return MainGroup.REVIEW
+        if (reviewDate?.let{it <= today} == true) return if (thresholdDate == null) MainGroup.REVIEW_HIDE_THRESHOLD else MainGroup.REVIEW
 
         val relThreshold = daysBetween(thresholdDate, today)    //无启动日期者按1970-01-01
         val relDue = daysBetween(dueDate, today)
@@ -275,9 +284,9 @@ object MyInterpreter {
         )
 
         result.add(                                                                     //index 4   优先级
-            (if (!showThreshold && firstGroup.showPriority) f.priority.display+"优先级" else null)
+            (if (thresholdShow == null && firstGroup.showPriority) f.priority.display+"优先级" else null)
                 ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light),
-                    1f, f.priority.code, center = true)}
+                    1f, f.priority.code.replace('-','_'), center = true)}
         )
 
         result.add(                                                                     //index 5   回顾日期
