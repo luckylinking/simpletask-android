@@ -34,6 +34,14 @@ enum class MainGroup {
         override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_red_dark)
     },
 
+    TODO{
+        override val title: String = "待办"
+        override val showPriority: Boolean = true
+        override val showTags: Boolean = true
+        override val showLists: Boolean = true
+        override val invertIsScheduleSort: Boolean = true
+    },
+
     IMPORTANT{
         override val title: String = "重要"
         override val showPriority: Boolean = true
@@ -41,15 +49,6 @@ enum class MainGroup {
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
         override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_dark)
-    },
-
-    TODO{
-        override val title: String = "待办"
-        override val showPriority: Boolean = true
-        override val showTags: Boolean = true
-        override val showLists: Boolean = true
-        override val invertIsScheduleSort: Boolean = true
-
     },
 
     REVIEW_HIDE_THRESHOLD{
@@ -212,8 +211,14 @@ object MyInterpreter {
                                                         ->      MainGroup.REVIEW
                 endTime != null                         ->      MainGroup.CRITICAL
                 dueDate?:"9999-12-31" <= today          ->      MainGroup.CRITICAL
-                priority == Priority.A                  ->      MainGroup.IMPORTANT
-                noSchedule && priority != Priority.NONE ->      MainGroup.REVIEW_HIDE_THRESHOLD
+                noSchedule                              ->
+                    when (priority) {
+                        Priority.NONE                   ->      MainGroup.TODO
+                        Priority.A,
+                        Priority.B,
+                        Priority.C                      ->      MainGroup.IMPORTANT
+                        else                            ->      MainGroup.REVIEW_HIDE_THRESHOLD
+                    }
                 else                                    ->      MainGroup.TODO
             }
 
