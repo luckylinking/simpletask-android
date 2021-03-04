@@ -11,14 +11,9 @@ jobs:
     - name: "Checkout"
       uses: actions/checkout@v1
     - name: "Run build"  
-      run: ./gradlew assembleCloudless assembleNextcloud
+      run: ./gradlew assembleCloudlessDebug
     - name: "Save output artifacts"
       uses: actions/upload-artifact@v1
       with:
         name: apks
         path: app/build/outputs/apk
-    - name: "Save report artifacts"
-      uses: actions/upload-artifact@v1
-      with:
-        name: reports
-        path: app/build/reports
