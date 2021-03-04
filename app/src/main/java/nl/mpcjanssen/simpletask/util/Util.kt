@@ -164,11 +164,17 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
         for(i in 0 until n) {
             if (header[i] != newHeader[i]?.title) {
                 result.add(HeaderLine("", showCount = false))
-                if (i == 0) result.add(HeaderLine("━━━━━━━━━━━━━━━━━━━━━━",null,
+                if (i == 0) result.add(HeaderLine("━━━━━━━━━━", ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light),
                     showCount = false,
                     center = true,
                     relTextSize = 1f
                 ))
+                if (i == 1) result.add(HeaderLine("━━━━━━━━━━",null,
+                    showCount = false,
+                    center = true,
+                    relTextSize = 1f
+                ))
+
                 for(j in i until n) {
                     if(headerLines[j]?.showCount == true) {
                         headerLines[j]!!.title += "（${count[j]}）"
@@ -212,7 +218,7 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
 
     // Add Bottom Header
     result.add(HeaderLine("", showCount = false))
-    result.add(HeaderLine("━━━━━━━━━━━━━━━━━━━━",
+    result.add(HeaderLine("━━━━━━━━━━━━━", ContextCompat.getColor(TodoApplication.app, R.color.gray67),
         showCount = false,
         center = true,
         relTextSize = 1f

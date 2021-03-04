@@ -146,7 +146,8 @@ object MyInterpreter {
 
         val relDate =
             if (dateStr == TodoApplication.app.today)
-                if (beginTime ?: "00:00" < hourMinuteNow()) "今日" else "稍后"
+//                if (beginTime ?: "00:00" < hourMinuteNow()) "今日" else "稍后"
+                "今日"
             else
                 dateStr
 
@@ -302,7 +303,7 @@ object MyInterpreter {
                 1 -> "稍后"
                 2 -> "未来"
                 else -> "~错误~"
-            }, null, 1.5f, showCount = false, center = true)
+            }, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light), 1.5f, showCount = false, center = true)
         )
 
         result.add(                                                                     //index 1   主分组名称
@@ -366,7 +367,7 @@ object MyInterpreter {
                 else
                     null
             )
-                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.gray67), center = true)}
+                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_dark), center = true)}
         )
 
 //        when {

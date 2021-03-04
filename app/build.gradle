@@ -83,7 +83,7 @@ android {
         }
         cloudless {
             dimension "main"
-            applicationId = "nl.mpcjanssen.simpletask"
+            applicationId = "mod.luckylinking.simpletask"
             manifestPlaceholders = [providerFlavour: "cloudless"]
         }
         nextcloud {
