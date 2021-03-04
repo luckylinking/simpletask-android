@@ -163,13 +163,8 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
 
         for(i in 0 until n) {
             if (header[i] != newHeader[i]?.title) {
-                result.add(HeaderLine("", showCount = false))
+                result.add(HeaderLine("", showCount = false))       //添加一个空白header，使最后一个任务下方出现分隔线
                 if (i == 0) result.add(HeaderLine("━━━━━━━━━━", ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light),
-                    showCount = false,
-                    center = true,
-                    relTextSize = 1f
-                ))
-                if (i == 1) result.add(HeaderLine("━━━━━━━━━━",null,
                     showCount = false,
                     center = true,
                     relTextSize = 1f
@@ -177,7 +172,7 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
 
                 for(j in i until n) {
                     if(headerLines[j]?.showCount == true) {
-                        headerLines[j]!!.title += "（${count[j]}）"
+                        headerLines[j]!!.title += "[${count[j]}]"
                     }
                     if(newHeader[j] != null) {
                         headerLines[j] = HeaderLine(newHeader[j]?.title?:"", newHeader[j]?.color, newHeader[j]?.showCount, newHeader[j]?.center, newHeader[j]?.relTextSize)
@@ -201,7 +196,7 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
     // Add count to last header
     for ((i,e) in headerLines.withIndex()){
         if(e?.showCount == true) {
-            e.title += "（${count[i]}）"
+            e.title += "[${count[i]}]"
         }
     }
 

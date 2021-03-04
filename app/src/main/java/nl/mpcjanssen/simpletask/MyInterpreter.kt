@@ -303,11 +303,11 @@ object MyInterpreter {
                 1 -> "稍后"
                 2 -> "未来"
                 else -> "~错误~"
-            }, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light), 1.5f, showCount = false, center = true)
+            }, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light), 1.5f, showCount = true, center = true)
         )
 
         result.add(                                                                     //index 1   主分组名称
-            Group(firstGroup.title, firstGroup.color, 1.5f, mainGroup = firstGroup, showCount = false)
+            Group(firstGroup.title, firstGroup.color, 1.5f, mainGroup = firstGroup, showCount = true)
         )
 
         result.add(                                                                     //index 2   事项或日程分组
