@@ -61,7 +61,7 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                 "by_prio" -> comp = { it.priority }
 //                "completed" -> comp = { it.isCompleted() }
                 "completed" -> comp = {                 //改为按创建或完成时间排序
-                    if (MyInterpreter.group1(it)?.showCompleteOrCreate == true) it.completionDate ?: it.createDate ?: "1970-01-01" else "1970-01-01"
+                    if (MyInterpreter.group1(it)?.mainGroup?.showCompleteOrCreate == true) it.completionDate ?: it.createDate ?: "1970-01-01" else "1970-01-01"
                 }
                 "by_creation_date" -> comp = { it.createDate ?: lastDate }
 //                "in_future" -> comp = { it.inFuture(today, createIsThreshold) }
@@ -78,7 +78,13 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
                 "by_completion_date" -> comp = { it.completionDate ?: lastDate }
                 "by_lua" -> comp = {                                                                //改为按主分组排序
                     val group = MyInterpreter.firstGrouping(it)
-                    group.ordinal.toString() + if (it.isSchedule()) "1" else if (group.invertIsScheduleSort) "2" else "0"
+                    if (group.inLater) {
+                        group.mainGroup.inFuture + 1
+                    } else {
+                        group.mainGroup.inFuture
+                    }.toString() +
+                            group.mainGroup.ordinal.toString() +
+                            if (it.isSchedule()) "1" else if (group.mainGroup.invertIsScheduleSort) "2" else "0"
                 }
 
                 else -> {

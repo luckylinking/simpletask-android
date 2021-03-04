@@ -17,6 +17,7 @@ enum class MainGroup {
         override val showCompleteOrCreate: Boolean = true
         override val showSchedule: Boolean = false
         override val isScheduleGrouping: Boolean = false
+        override val inFuture: Int = 0
     },
 
     TOP{
@@ -24,6 +25,7 @@ enum class MainGroup {
         override val showTags: Boolean = true
         override val showSchedule: Boolean = false
         override val isScheduleGrouping: Boolean = false
+        override val inFuture: Int = 0
     },
 
     CRITICAL{
@@ -32,6 +34,7 @@ enum class MainGroup {
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_red_dark)
+        override val inFuture: Int = 0
     },
 
     TODO{
@@ -40,6 +43,7 @@ enum class MainGroup {
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
+        override val inFuture: Int = 0
     },
 
     IMPORTANT{
@@ -49,6 +53,7 @@ enum class MainGroup {
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
         override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_dark)
+        override val inFuture: Int = 0
     },
 
     REVIEW_HIDE_THRESHOLD{
@@ -95,6 +100,7 @@ enum class MainGroup {
     open val isScheduleGrouping: Boolean = true             //按“日程”和“事项”分组
     open val invertIsScheduleSort: Boolean = false          //是否将“日程”放到“事项”之前
     open val color: Int? = null                             //标题颜色
+    open val inFuture: Int = 2                              // 0-当前或稍后启动事务，2-未来或完成事务（查看、完成、将来）
 }
 
 
@@ -185,45 +191,61 @@ object MyInterpreter {
 //    已经完成的任务
 //        完成、COMPLETED
 
-    fun firstGrouping(f: Task, now: String = hourMinuteNow(), today: String = originDate?: TodoApplication.app.today): MainGroup {
+    fun firstGrouping(f: Task, now: String = hourMinuteNow(), today: String = originDate?: TodoApplication.app.today): MainGroupWithLaterIdentify {
         return group1(f)?: group2(f, now, today)
     }
 
-    fun group1(f: Task): MainGroup? {
+    fun group1(f: Task): MainGroupWithLaterIdentify? {
 
-        if (f.isCompleted()) return MainGroup.COMPLETED
-        if (f.onTop()) return MainGroup.TOP
-        if (f.deferDate ?: f.thresholdDate == null &&f.reviewDate == null && f.lists == null && f.tags == null) return MainGroup.INBOX
+        if (f.isCompleted())
+            return MainGroupWithLaterIdentify(MainGroup.COMPLETED, false)
+        if (f.onTop())
+            return MainGroupWithLaterIdentify(MainGroup.TOP, false)
+        if (f.deferDate ?: f.thresholdDate == null &&f.reviewDate == null && f.lists == null && f.tags == null)
+            return MainGroupWithLaterIdentify(MainGroup.INBOX, false)
         return null
     }
 
-    fun group2(f: Task, now: String, today: String): MainGroup {
+    fun group2(f: Task, now: String, today: String): MainGroupWithLaterIdentify {
 
         val thresholdDate = f.deferDate ?: f.thresholdDate
         val dueDate = f.dueDate
         val endTime = f.endTime
         val priority = f.priority
-        val noSchedule = !f.isSchedule()
+        val notSchedule = !f.isSchedule()
+        val beginTime = f.deferTime?:f.beginTime
 
-        if (thresholdDate?.let{it <= today} == true)
+
+
+        //启动日期在今日或之前的
+        if (thresholdDate?.let{it <= today} == true) {
+            val isToday = (thresholdDate == today)
             return when {
-                (thresholdDate == today) && (f.deferTime?:f.beginTime)?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 1 } == true
-                                                        ->      MainGroup.REVIEW
-                endTime != null                         ->      MainGroup.CRITICAL
-                dueDate?:"9999-12-31" <= today          ->      MainGroup.CRITICAL
-                noSchedule                              ->
-                    when (priority) {
-                        Priority.NONE                   ->      MainGroup.TODO
-                        Priority.A,
-                        Priority.B,
-                        Priority.C                      ->      MainGroup.IMPORTANT
-                        else                            ->      MainGroup.REVIEW_HIDE_THRESHOLD
-                    }
-                else                                    ->      MainGroup.TODO
-            }
+                //今日下一时点之后的事务
+                isToday && beginTime?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 1 } == true
+                                                ->      MainGroupWithLaterIdentify(MainGroup.REVIEW, false)
+                //今日下一时点之前的事务，或今日及以前的未设时间点事务
+                endTime != null                 ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
+                dueDate?:"9999-12-31" <= today  ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
+                //未设时间点
+                notSchedule                     ->
+                    MainGroupWithLaterIdentify(
+                        when (priority) {
+                            Priority.NONE       ->      MainGroup.TODO
+                            Priority.A,
+                            Priority.B,
+                            Priority.C          ->      MainGroup.IMPORTANT
+                        //虽已经启动，但设置了D-Z优先级的，放到REVIEW
+                        else                    ->      MainGroup.REVIEW_HIDE_THRESHOLD
+                    }, false)
+                //设有时间点
+                else                            ->     MainGroupWithLaterIdentify(MainGroup.TODO, isToday && beginTime ?: "00:00" > now)
+                }
+        }
 
         val reviewDate = f.reviewDate
-        return when {
+        return MainGroupWithLaterIdentify(
+            when {
             reviewDate?.let{it > today} == true         ->      MainGroup.FUTURE
             thresholdDate == null                       ->      MainGroup.REVIEW_HIDE_THRESHOLD
             reviewDate != null                          ->      MainGroup.REVIEW
@@ -231,18 +253,18 @@ object MyInterpreter {
             dueDate != null && daysBetween(dueDate, today) < 16
                                                         ->      MainGroup.REVIEW
             else                                        ->      MainGroup.FUTURE
-        }
+        }, false)
 //            if (f.tags?.sorted()?.firstOrNull() == null) {}
     }
 
     fun onSortCallback(f: Task): String {
 
         val comps = onGroupCallback(f)
-        val comp3 = comps[3]?.sort?:"1970-01-01"
-        val comp4 = comps[4]?.sort?:"_"
-        val comp5 = comps[5]?.title?:"1970-01-01"
-        val comp6 = comps[6]?.title?:"00:00"
-        return "$comp3$comp4$comp5$comp6"
+        val comp4 = comps[4]?.sort?:"1970-01-01"
+        val comp5 = comps[5]?.sort?:"_"
+        val comp6 = comps[6]?.title?:"1970-01-01"
+        val comp7 = comps[7]?.title?:"00:00"
+        return "$comp4$comp5$comp6$comp7"
 
     }
 
@@ -256,47 +278,64 @@ object MyInterpreter {
         val center: Boolean? = null
     )
 
+    data class MainGroupWithLaterIdentify(
+        val mainGroup: MainGroup,
+        val inLater: Boolean
+    )
+
     fun onGroupCallback(f: Task): ArrayList<Group?> {
         val result = ArrayList<Group?>(9)
         val nowTime = hourMinuteNow()
         val today = originDate?: TodoApplication.app.today
-        val firstGroup = firstGrouping(f, nowTime, today)
+        val firstGroupWithLaterIdentify = firstGrouping(f, nowTime, today)
+        val firstGroup = firstGroupWithLaterIdentify.mainGroup
+        val inFuture = firstGroup.inFuture + if (firstGroupWithLaterIdentify.inLater) 1 else 0
         val startTime = f.deferTime ?: f.beginTime
         val isSchedule = f.isSchedule()
         val showThreshold = firstGroup.showThreshold || isSchedule && firstGroup.showSchedule
         val thresholdShow = if (showThreshold) f.deferDate?: f.thresholdDate else null
 
-        result.add(                                                                     //index 0   主分组名称
+        result.add(                                                                     //index 0   时段
+            Group(
+            when (inFuture) {
+                0 -> "当前"
+                1 -> "稍后"
+                2 -> "未来"
+                else -> "~错误~"
+            }, null, 1.5f, showCount = false, center = true)
+        )
+
+        result.add(                                                                     //index 1   主分组名称
             Group(firstGroup.title, firstGroup.color, 1.5f, mainGroup = firstGroup, showCount = false)
         )
 
-        result.add(                                                                     //index 1   事项或日程分组
+        result.add(                                                                     //index 2   事项或日程分组
             (if (firstGroup.isScheduleGrouping) if (isSchedule) "日程" else "事项" else null)
                 ?.let{Group(it, relTextSize = 1f)}
         )
 
-        result.add(                                                                     //index 2   创建或完成日期
+        result.add(                                                                     //index 3   创建或完成日期
             (if (firstGroup.showCompleteOrCreate) f.completionDate?: f.createDate?: "1970-01-01"  else null)
                 ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark))}
         )
 
-        result.add(                                                                     //index 3   启动日期
+        result.add(                                                                     //index 4   启动日期
             thresholdShow?.let{Group(relativeDate(it, startTime),
                 ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light),1f, it, center = true)}
         )
 
-        result.add(                                                                     //index 4   优先级
+        result.add(                                                                     //index 5   优先级
             (if (thresholdShow == null && firstGroup.showPriority) f.priority.display+"优先级" else null)
                 ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light),
                     1f, f.priority.code.replace('-','_'), center = true)}
         )
 
-        result.add(                                                                     //index 5   回顾日期
+        result.add(                                                                     //index 6   回顾日期
             (if (firstGroup.showReview) f.reviewDate else null)
                 ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark))}
         )
 
-        result.add(                                                                     //index 6   任务时间
+        result.add(                                                                     //index 7   任务时间
             (if (firstGroup.showSchedule) startTime?:(if (thresholdShow != null) "--:--" else null) else null)
                 ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark), center = true)}
         )
@@ -304,7 +343,7 @@ object MyInterpreter {
         val tags = (f.tags ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
         val lists = (f.lists ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
 
-        result.add(                                                                     //index 7   标签
+        result.add(                                                                     //index 8   标签
             (
                 if (firstGroup.showTags)
                     when (tags) {
@@ -317,7 +356,7 @@ object MyInterpreter {
                 ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light))}
         )
 
-        result.add(                                                                     //index 8   清单
+        result.add(                                                                     //index 9   清单
             (
                 if (firstGroup.showLists)
                     when (lists) {

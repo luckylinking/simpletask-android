@@ -88,7 +88,7 @@ class TaskAdapter(val completeAction: (Task) -> Unit,
         val taskRec = view.taskrec
         val taskTimeDefer = view.timedefer
 
-        val group = MyInterpreter.firstGrouping(task)
+        val group = MyInterpreter.firstGrouping(task).mainGroup
         val showBeginTime = !group.showSchedule
         val showLists = !group.showLists
 

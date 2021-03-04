@@ -212,7 +212,7 @@ fun addHeaderLines(visibleTasks: List<Task>, sorts: List<String>, no_header: Str
 
     // Add Bottom Header
     result.add(HeaderLine("", showCount = false))
-    result.add(HeaderLine("━━━━━━━━━━━━━━━━━━━━━━",
+    result.add(HeaderLine("━━━━━━━━━━━━━━━━━━━━",
         showCount = false,
         center = true,
         relTextSize = 1f
