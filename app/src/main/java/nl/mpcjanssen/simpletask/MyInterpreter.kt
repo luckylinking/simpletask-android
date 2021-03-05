@@ -93,8 +93,8 @@ enum class MainGroup {
     open val showCompleteOrCreate: Boolean = false          //显示完成或创建日期（无者显示“1970-01-01”）
     open val showPriority: Boolean = false                  //在无启动日期显示的前提下显示优先级
     open val showReview: Boolean = false                    //显示回顾日期（无者不显示）
-    open val showSchedule: Boolean = true                   //显示任务时间（无任务时间者如需要显示启动日期则在任务时间栏显示"--:--"，其余不显示）
-    open val showThreshold: Boolean = false                 //没有启动时间的任务显示启动日期且任务时间显示"--:--"（有任务时间且要求显示者自动显示启动日期）（无者不显示）
+    open val showSchedule: Boolean = true                   //显示任务时间（无者不显示）
+    open val showThreshold: Boolean = false                 //没有启动时间的任务显示启动日期（有任务时间且要求显示者自动显示启动日期），无启动日期者不显示
     open val showTags: Boolean = false                      //显示标签（无者显示“~”）
     open val showLists: Boolean = false                     //显示清单（无者不显示）
     open val isScheduleGrouping: Boolean = true             //按“日程”和“事项”分组
@@ -266,8 +266,8 @@ object MyInterpreter {
         val comps = onGroupCallback(f)
         val comp4 = comps[4]?.sort?:"1970-01-01"
         val comp5 = comps[5]?.sort?:"_"
-        val comp6 = comps[6]?.title?:"1970-01-01"
-        val comp7 = comps[7]?.title?:"00:00"
+        val comp6 = comps[6]?.title?:"00:00"
+        val comp7 = comps[7]?.title?:"1970-01-01"
         return "$comp4$comp5$comp6$comp7"
 
     }
@@ -335,14 +335,14 @@ object MyInterpreter {
                     1f, f.priority.code.replace('-','_'), center = true)}
         )
 
-        result.add(                                                                     //index 6   回顾日期
-            (if (firstGroup.showReview) f.reviewDate else null)
-                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark))}
+        result.add(                                                                     //index 6   任务时间
+            (if (firstGroup.showSchedule) startTime else null)
+                ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark), center = true)}
         )
 
-        result.add(                                                                     //index 7   任务时间
-            (if (firstGroup.showSchedule) startTime?:(if (thresholdShow != null) "--:--" else null) else null)
-                ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark), center = true)}
+        result.add(                                                                     //index 7   回顾日期
+            (if (firstGroup.showReview) f.reviewDate else null)
+                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark))}
         )
 
         val tags = (f.tags ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
