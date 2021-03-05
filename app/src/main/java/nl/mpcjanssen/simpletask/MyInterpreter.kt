@@ -71,15 +71,8 @@ enum class MainGroup {
         override val showLists: Boolean = true
     },
 
-    COMPLETED{
-        override val title: String = "完成"
-        override val showCompleteOrCreate: Boolean = true
-        override val showSchedule: Boolean = false
-        override val showTags: Boolean = true
-    },
-
     FUTURE{
-        override val title: String = "将来"
+        override val title: String = "日后"
         override val showPriority: Boolean = true
         override val showThreshold: Boolean = true
         override val showReview: Boolean = true
@@ -87,6 +80,13 @@ enum class MainGroup {
         override val showLists: Boolean = true
     },
 
+    COMPLETED{
+        override val title: String = "完成"
+        override val showCompleteOrCreate: Boolean = true
+        override val showSchedule: Boolean = false
+        override val showTags: Boolean = true
+        override val inFuture: Int = 3
+    },
     ;
 
     open val title: String = ""                             //标题文字
@@ -100,7 +100,7 @@ enum class MainGroup {
     open val isScheduleGrouping: Boolean = true             //按“日程”和“事项”分组
     open val invertIsScheduleSort: Boolean = false          //是否将“日程”放到“事项”之前
     open val color: Int? = null                             //标题颜色
-    open val inFuture: Int = 2                              // 0-当前或稍后启动事务，2-未来或完成事务（查看、完成、将来）
+    open val inFuture: Int = 2                              // 0-当前或稍后启动事务，2-未来事务（查看、将来），3-完成事务
 }
 
 
@@ -183,11 +183,14 @@ object MyInterpreter {
 //                              今日启动已到开始时间的非关键日常任务
 //        待办、TO-DO		今天计划要做的任务（其中高优先级者为重要任务，是当前价值最高、收益最大，应该投入主要精力的工作，建议不超过五条）
 //                              除以上任务及今日启动但未到开始时间的任务之外，启动日期在今日或之前的任务
+//        重要、IMPORTANT   今日已启动、无开始时间、优先级为A-C的任务
 //        过目、REVIEW		今天查看、考虑一下再根据情况做决定的任务（建议不超过二十条）
-//                              今日启动但未到开始时间的任务
+//                              今日启动但未到开始时间的任务（以当前时刻后一个小时结束点为界）
+//                              今日已启动、无开始时间并且优先级为D-Z的任务（不显示启动日期）
 //                              回顾日期在今日或之前的任务
-//                              无回顾日期任务中无启动日期的任务、启动日期在十天内的任务、截止日期在十天（十五天？）内的任务
-//        将来、FUTURE		日后再查看和处理的事务
+//                              无回顾日期任务中无启动日期的任务（不显示启动日期）
+//                              其余任务中启动日期在十天内的任务、截止日期在十天（十五天？）内的任务
+//        日后、FUTURE		日后再查看和处理的事务
 //                              不属于以上的其他任务
 //    已经完成的任务
 //        完成、COMPLETED
@@ -222,10 +225,10 @@ object MyInterpreter {
         if (thresholdDate?.let{it <= today} == true) {
             val isToday = (thresholdDate == today)
             return when {
-                //今日下一时点之后的事务
+                //今日下一小时之后的事务
                 isToday && beginTime?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 1 } == true
                                                 ->      MainGroupWithLaterIdentify(MainGroup.REVIEW, false)
-                //今日下一时点之前的事务，或今日及以前的未设时间点事务
+                //今日下一小时之前的事务，或今日及以前的未设时间点事务
                 endTime != null                 ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
                 dueDate?:"9999-12-31" <= today  ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
                 //未设时间点
@@ -302,6 +305,7 @@ object MyInterpreter {
                 0 -> "当前"
                 1 -> "稍后"
                 2 -> "未来"
+                3 -> "完成"
                 else -> "~错误~"
             }, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light), 1.5f, showCount = true, center = true)
         )
@@ -312,7 +316,7 @@ object MyInterpreter {
 
         result.add(                                                                     //index 2   事项或日程分组
             (if (firstGroup.isScheduleGrouping) if (isSchedule) "日程" else "事项" else null)
-                ?.let{Group(it, relTextSize = 1f)}
+                ?.let{Group(it, relTextSize = 1f, showCount = true)}
         )
 
         result.add(                                                                     //index 3   创建或完成日期
