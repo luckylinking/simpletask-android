@@ -185,7 +185,7 @@ object MyInterpreter {
 //                              除以上任务及今日启动但未到开始时间的任务之外，启动日期在今日或之前的任务
 //        重要、IMPORTANT   今日已启动、无开始时间、优先级为A-C的任务
 //        过目、REVIEW		今天查看、考虑一下再根据情况做决定的任务（建议不超过二十条）
-//                              今日启动但未到开始时间的任务（以当前时刻后一个小时结束点为界）
+//                              今日启动但未到开始时间的任务（以当前时刻后三个小时结束点为界）
 //                              今日已启动、无开始时间并且优先级为D-Z的任务（不显示启动日期）
 //                              回顾日期在今日或之前的任务
 //                              无回顾日期任务中无启动日期的任务（不显示启动日期）
@@ -225,10 +225,10 @@ object MyInterpreter {
         if (thresholdDate?.let{it <= today} == true) {
             val isToday = (thresholdDate == today)
             return when {
-                //今日下一小时之后的事务
-                isToday && beginTime?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 1 } == true
+                //今日当前小时后三小时之后的事务
+                isToday && beginTime?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 3 } == true
                                                 ->      MainGroupWithLaterIdentify(MainGroup.REVIEW, false)
-                //今日下一小时之前的事务，或今日及以前的未设时间点事务
+                //今日当前小时后三小时结束之前的事务，或今日及以前的未设时间点事务
                 endTime != null                 ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
                 dueDate?:"9999-12-31" <= today  ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
                 //未设时间点
