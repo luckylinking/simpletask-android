@@ -45,7 +45,6 @@ enum class MainGroup {
 
     TODO{
         override val title: String = "待办"
-        override val showPriority: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
