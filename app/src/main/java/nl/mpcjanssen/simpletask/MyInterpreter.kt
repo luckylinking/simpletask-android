@@ -417,22 +417,10 @@ object MyInterpreter {
                 }
         )
 
-        result.add(                                                                     //index 7   回顾日期
-            (if (firstGroup.showReview) f.reviewDate else null)
-                ?.let {
-                    Group(
-                        it, ContextCompat.getColor(
-                            TodoApplication.app,
-                            R.color.simple_green_dark
-                        )
-                    )
-                }
-        )
-
         val tags = (f.tags ?: "").toString().removeSurrounding("[", "]").replace(", ", "｜")
         val lists = (f.lists ?: "").toString().removeSurrounding("[", "]").replace(", ", "｜")
 
-        result.add(                                                                     //index 8   标签
+        result.add(                                                                     //index 7   标签
             (
                     if (firstGroup.showTags)
                         when (tags) {
@@ -452,7 +440,7 @@ object MyInterpreter {
                 }
         )
 
-        result.add(                                                                     //index 9   清单
+        result.add(                                                                     //index 8   清单
             (
                     if (firstGroup.showLists)
                         when (lists) {
@@ -467,6 +455,18 @@ object MyInterpreter {
                         it,
                         ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_dark),
                         center = true
+                    )
+                }
+        )
+
+        result.add(                                                                     //index 9   回顾日期
+            (if (firstGroup.showReview) f.reviewDate else null)
+                ?.let {
+                    Group(
+                        it, ContextCompat.getColor(
+                            TodoApplication.app,
+                            R.color.simple_green_dark
+                        )
                     )
                 }
         )
