@@ -5,13 +5,14 @@ import nl.mpcjanssen.simpletask.task.Task
 import nl.mpcjanssen.simpletask.util.alfaSort
 import java.util.*
 import nl.mpcjanssen.simpletask.MyInterpreter
+import kotlin.math.abs
 
 class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boolean, createIsThreshold: Boolean, moduleName: String? = null) {
     var comparator : Comparator<Task>? = null
 
     var fileOrder = true
 
-    val luaCache: MutableMap<Task, String> = HashMap<Task, String>();
+    val luaCache: MutableMap<Task, String> = HashMap<Task, String>()
 
     init {
         label@ for (sort in sorts) {
@@ -75,7 +76,12 @@ class MultiComparator(sorts: ArrayList<String>, today: String, caseSensitve: Boo
 //                    it.thresholdDate ?: fallback
 //                }
                 "by_threshold_date" -> comp = { MyInterpreter.onSortCallback(it) }    //改为按中间分组排序
-                "by_completion_date" -> comp = { it.completionDate ?: lastDate }
+                "by_completion_date" -> comp = {                                        //改为按距基准日期间隔排序
+                    val baseDate = MyInterpreter.originDate ?: today
+                    val thresholdDate = it.thresholdDate ?: it.createDate
+                    if (thresholdDate == null) 0 else abs(MyInterpreter.daysBetween(thresholdDate, baseDate))
+//                    it.completionDate ?: lastDate
+                }
                 "by_lua" -> comp = {                                                                //改为按主分组排序
                     val group = MyInterpreter.firstGrouping(it)
                     if (group.inLater) {

@@ -258,8 +258,8 @@
     <string name="by_creation_date">创建日期</string>
     <string name="in_future">有无标签</string>
     <string name="by_due_date">截止日期</string>
-    <string name="by_threshold_date">中间分组</string>
-    <string name="by_completion_date">完成日期</string>
+    <string name="by_threshold_date">中间分组（启动日期/优先级、开始时间）</string>
+    <string name="by_completion_date">启动（无者按创建）日期离基准日间隔</string>
     <string name="by_lua">主分组</string>
     <string name="filter_select_all">选择全部</string>
     <string name="filter_clear_all">清除筛选器</string>

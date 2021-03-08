@@ -128,8 +128,8 @@ object MyInterpreter {
 
     fun daysBetween(dateStrNew: String?, dateStrOld: String?): Int {
 
-        val dateNew = LocalDate.parse(dateStrNew)
-        val dateOld = LocalDate.parse(dateStrOld)
+        val dateNew = LocalDate.parse(dateStrNew?: "1970-01-01")
+        val dateOld = LocalDate.parse(dateStrOld?: "1970-01-01")
         return dateOld.until(dateNew, ChronoUnit.DAYS).toInt()
 
     //        val day = SimpleDateFormat("yyyy-MM-dd")
@@ -305,8 +305,7 @@ object MyInterpreter {
         val comp4 = comps[4]?.sort?:"1970-01-01"
         val comp5 = comps[5]?.sort?:"_"
         val comp6 = comps[6]?.title?:"00:00"
-        val comp7 = comps[7]?.title?:"1970-01-01"
-        return "$comp4$comp5$comp6$comp7"
+        return "$comp4$comp5$comp6"
 
     }
 
