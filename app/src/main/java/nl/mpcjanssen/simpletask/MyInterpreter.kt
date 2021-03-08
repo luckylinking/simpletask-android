@@ -1,13 +1,16 @@
 package nl.mpcjanssen.simpletask
 
 
-import nl.mpcjanssen.simpletask.task.Task
-import nl.mpcjanssen.simpletask.util.addInterval
-import java.text.SimpleDateFormat
-import java.util.*
-import java.util.regex.Pattern
 import androidx.core.content.ContextCompat
 import nl.mpcjanssen.simpletask.task.Priority
+import nl.mpcjanssen.simpletask.task.Task
+import nl.mpcjanssen.simpletask.util.addInterval
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.*
+import java.util.regex.Pattern
 
 
 enum class MainGroup {
@@ -33,7 +36,10 @@ enum class MainGroup {
         override val showThreshold: Boolean = true
         override val showTags: Boolean = true
         override val showLists: Boolean = true
-        override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_red_dark)
+        override val color: Int = ContextCompat.getColor(
+            TodoApplication.app,
+            R.color.simple_red_dark
+        )
         override val inFuture: Int = 0
     },
 
@@ -52,7 +58,10 @@ enum class MainGroup {
         override val showTags: Boolean = true
         override val showLists: Boolean = true
         override val invertIsScheduleSort: Boolean = true
-        override val color: Int? = ContextCompat.getColor(TodoApplication.app, R.color.simple_orange_dark)
+        override val color: Int = ContextCompat.getColor(
+            TodoApplication.app,
+            R.color.simple_orange_dark
+        )
         override val inFuture: Int = 0
     },
 
@@ -119,10 +128,15 @@ object MyInterpreter {
         }
 
     fun daysBetween(dateStrNew: String?, dateStrOld: String?): Int {
-        val day = SimpleDateFormat("yyyy-MM-dd")
-        val newLong = day.parse(dateStrNew?: "1970-01-01").time
-        val oldLong = day.parse(dateStrOld?: "1970-01-01").time
-        return ((newLong - oldLong)/24/3600/1000).toInt()
+
+        val dateNew = LocalDate.parse(dateStrNew)
+        val dateOld = LocalDate.parse(dateStrOld)
+        return dateOld.until(dateNew, ChronoUnit.DAYS).toInt()
+
+    //        val day = SimpleDateFormat("yyyy-MM-dd")
+//        val newLong = day.parse(dateStrNew ?: "1970-01-01").time
+//        val oldLong = day.parse(dateStrOld ?: "1970-01-01").time
+//        return ((newLong - oldLong)/24/3600/1000).toInt()
     }
 
 //    fun secondsNow(): Int {
@@ -134,24 +148,32 @@ object MyInterpreter {
 //        return hour * 3600 + minute * 60 + second
 //    }
 
-    fun hourMinuteNow(): String {
+    private fun hourMinuteNow(): String {
 
-        val clock = SimpleDateFormat("HH:mm")
-        return clock.format(Date())
+        return LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+
+        //        val clock = SimpleDateFormat("HH:mm")
+//        return clock.format(Date())
 
 //        return clock.format(System.currentTimeMillis())
     }
 
-    fun relativeDate(dateStr: String?, beginTime: String? = null): String? {
+    fun relativeDate(dateStr: String?): String? {
 
-        val relDate =
-            if (dateStr == TodoApplication.app.today)
+        val today = TodoApplication.app.today
+        return if (dateStr == today)
 //                if (beginTime ?: "00:00" < hourMinuteNow()) "今日" else "稍后"
                 "今日"
-            else
-                dateStr
+            else when (daysBetween(dateStr, today)) {
+                1   -> "明日"
+                2   -> "后日"
+                3   -> "大后日"
+                -1  -> "昨日"
+                -2  -> "前日"
+                -3  -> "大前日"
+                else -> dateStr
+            }
 
-        return relDate
     }
 
 //    private val cal = Calendar.getInstance() // 获得一个日历
@@ -195,7 +217,11 @@ object MyInterpreter {
 //    已经完成的任务
 //        完成、COMPLETED
 
-    fun firstGrouping(f: Task, now: String = hourMinuteNow(), today: String = originDate?: TodoApplication.app.today): MainGroupWithLaterIdentify {
+    fun firstGrouping(
+        f: Task,
+        now: String = hourMinuteNow(),
+        today: String = originDate ?: TodoApplication.app.today
+    ): MainGroupWithLaterIdentify {
         return group1(f)?: group2(f, now, today)
     }
 
@@ -226,38 +252,51 @@ object MyInterpreter {
             val isToday = (thresholdDate == today)
             return when {
                 //今日当前小时后三小时之后的事务
-                isToday && beginTime?.substring(0,2)?.toIntOrNull()?.let{ it > now.substring(0,2).toInt() + 3 } == true
-                                                ->      MainGroupWithLaterIdentify(MainGroup.REVIEW, false)
+                isToday && beginTime?.substring(0, 2)?.toIntOrNull()?.let{ it > now.substring(0, 2).toInt() + 3 } == true
+                                                ->      MainGroupWithLaterIdentify(
+                    MainGroup.REVIEW,
+                    false
+                )
                 //今日当前小时后三小时结束之前的事务，或今日及以前的未设时间点事务
-                endTime != null                 ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
-                dueDate?:"9999-12-31" <= today  ->      MainGroupWithLaterIdentify(MainGroup.CRITICAL, isToday && beginTime ?: "00:00" > now)
+                endTime != null                 ->      MainGroupWithLaterIdentify(
+                    MainGroup.CRITICAL,
+                    isToday && beginTime ?: "00:00" > now
+                )
+                dueDate?:"9999-12-31" <= today  ->      MainGroupWithLaterIdentify(
+                    MainGroup.CRITICAL,
+                    isToday && beginTime ?: "00:00" > now
+                )
                 //未设时间点
                 notSchedule                     ->
                     MainGroupWithLaterIdentify(
                         when (priority) {
-                            Priority.NONE       ->      MainGroup.TODO
+                            Priority.NONE -> MainGroup.TODO
                             Priority.A,
                             Priority.B,
-                            Priority.C          ->      MainGroup.IMPORTANT
-                        //虽已经启动，但设置了D-Z优先级的，放到REVIEW
-                        else                    ->      MainGroup.REVIEW_HIDE_THRESHOLD
-                    }, false)
+                            Priority.C -> MainGroup.IMPORTANT
+                            //虽已经启动，但设置了D-Z优先级的，放到REVIEW
+                            else -> MainGroup.REVIEW_HIDE_THRESHOLD
+                        }, false
+                    )
                 //设有时间点
-                else                            ->     MainGroupWithLaterIdentify(MainGroup.TODO, isToday && beginTime ?: "00:00" > now)
+                else                            ->     MainGroupWithLaterIdentify(
+                    MainGroup.TODO,
+                    isToday && beginTime ?: "00:00" > now
+                )
                 }
         }
 
         val reviewDate = f.reviewDate
         return MainGroupWithLaterIdentify(
             when {
-            reviewDate?.let{it > today} == true         ->      MainGroup.FUTURE
-            thresholdDate == null                       ->      MainGroup.REVIEW_HIDE_THRESHOLD
-            reviewDate != null                          ->      MainGroup.REVIEW
-            daysBetween(thresholdDate, today) < 11      ->      MainGroup.REVIEW
-            dueDate != null && daysBetween(dueDate, today) < 16
-                                                        ->      MainGroup.REVIEW
-            else                                        ->      MainGroup.FUTURE
-        }, false)
+                reviewDate?.let { it > today } == true -> MainGroup.FUTURE
+                thresholdDate == null -> MainGroup.REVIEW_HIDE_THRESHOLD
+                reviewDate != null -> MainGroup.REVIEW
+                daysBetween(thresholdDate, today) < 11 -> MainGroup.REVIEW
+                dueDate != null && daysBetween(dueDate, today) < 16
+                -> MainGroup.REVIEW
+                else -> MainGroup.FUTURE
+            }, false)
 //            if (f.tags?.sorted()?.firstOrNull() == null) {}
     }
 
@@ -301,77 +340,137 @@ object MyInterpreter {
 
         result.add(                                                                     //index 0   时段
             Group(
-            when (inFuture) {
-                0 -> "当前"
-                1 -> "稍后"
-                2 -> "未来"
-                3 -> "完成"
-                else -> "~错误~"
-            }, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light), 1.5f, showCount = true, center = true)
+                when (inFuture) {
+                    0 -> "当前"
+                    1 -> "稍后"
+                    2 -> "未来"
+                    3 -> "完成"
+                    else -> "~错误~"
+                },
+                ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light),
+                1.5f,
+                showCount = true,
+                center = true
+            )
         )
 
         result.add(                                                                     //index 1   主分组名称
-            Group(firstGroup.title, firstGroup.color, 1.5f, mainGroup = firstGroup, showCount = true)
+            Group(
+                firstGroup.title,
+                firstGroup.color,
+                1.5f,
+                mainGroup = firstGroup,
+                showCount = true
+            )
         )
 
         result.add(                                                                     //index 2   事项或日程分组
             (if (firstGroup.isScheduleGrouping) if (isSchedule) "日程" else "事项" else null)
-                ?.let{Group(it, relTextSize = 1f, showCount = true)}
+                ?.let { Group(it, relTextSize = 1f, showCount = true) }
         )
 
         result.add(                                                                     //index 3   创建或完成日期
-            (if (firstGroup.showCompleteOrCreate) f.completionDate?: f.createDate?: "1970-01-01"  else null)
-                ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark))}
+            (if (firstGroup.showCompleteOrCreate) f.completionDate ?: f.createDate
+            ?: "1970-01-01" else null)
+                ?.let {
+                    Group(
+                        it, ContextCompat.getColor(
+                            TodoApplication.app,
+                            R.color.simple_green_dark
+                        )
+                    )
+                }
         )
 
         result.add(                                                                     //index 4   启动日期
-            thresholdShow?.let{Group(relativeDate(it, startTime),
-                ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light),1f, it, center = true)}
+            thresholdShow?.let {
+                Group(
+                    relativeDate(it),
+                    ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light),
+                    1f,
+                    it,
+                    center = true
+                )
+            }
         )
 
         result.add(                                                                     //index 5   优先级
-            (if (thresholdShow == null && firstGroup.showPriority) f.priority.display+"优先级" else null)
-                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_light),
-                    1f, f.priority.code.replace('-','_'), center = true)}
+            (if (thresholdShow == null && firstGroup.showPriority) f.priority.display + "优先级" else null)
+                ?.let {
+                    Group(
+                        it, ContextCompat.getColor(
+                            TodoApplication.app,
+                            R.color.simple_green_light
+                        ),
+                        1f, f.priority.code.replace('-', '_'), center = true
+                    )
+                }
         )
 
         result.add(                                                                     //index 6   任务时间
             (if (firstGroup.showSchedule) startTime else null)
-                ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark), center = true)}
+                ?.let {
+                    Group(
+                        it, ContextCompat.getColor(
+                            TodoApplication.app,
+                            R.color.simple_green_dark
+                        ), center = true
+                    )
+                }
         )
 
         result.add(                                                                     //index 7   回顾日期
             (if (firstGroup.showReview) f.reviewDate else null)
-                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_green_dark))}
+                ?.let {
+                    Group(
+                        it, ContextCompat.getColor(
+                            TodoApplication.app,
+                            R.color.simple_green_dark
+                        )
+                    )
+                }
         )
 
-        val tags = (f.tags ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
-        val lists = (f.lists ?: "").toString().removeSurrounding("[", "]").replace(", ","｜")
+        val tags = (f.tags ?: "").toString().removeSurrounding("[", "]").replace(", ", "｜")
+        val lists = (f.lists ?: "").toString().removeSurrounding("[", "]").replace(", ", "｜")
 
         result.add(                                                                     //index 8   标签
             (
-                if (firstGroup.showTags)
-                    when (tags) {
-                        "" -> "~"
-                        else -> tags
-                    }
-                else
-                    null
-            )
-                ?.let{Group(it, ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_light))}
+                    if (firstGroup.showTags)
+                        when (tags) {
+                            "" -> "~"
+                            else -> tags
+                        }
+                    else
+                        null
+                    )
+                ?.let {
+                    Group(
+                        it, ContextCompat.getColor(
+                            TodoApplication.app,
+                            R.color.simple_blue_light
+                        )
+                    )
+                }
         )
 
         result.add(                                                                     //index 9   清单
             (
-                if (firstGroup.showLists)
-                    when (lists) {
-                        ""  -> null
-                        else -> "@$lists"
-                    }
-                else
-                    null
-            )
-                ?.let{Group(it,ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_dark), center = true)}
+                    if (firstGroup.showLists)
+                        when (lists) {
+                            "" -> null
+                            else -> "@$lists"
+                        }
+                    else
+                        null
+                    )
+                ?.let {
+                    Group(
+                        it,
+                        ContextCompat.getColor(TodoApplication.app, R.color.simple_blue_dark),
+                        center = true
+                    )
+                }
         )
 
 //        when {
